@@ -1,0 +1,12 @@
+{
+  "apps": [
+    {
+      "app_id": "app_30cde629-8a53-4966-a72d-2af0ec4d01b0",
+      "org_id": "user_774e5f08-acdb-4262-a50c-9938394ac3e3",
+      "deploy_url": "https://push-n3-par-clevercloud-customers.services.clever-cloud.com/app_30cde629-8a53-4966-a72d-2af0ec4d01b0.git",
+      "git_ssh_url": "git+ssh://git@push-n3-par-clevercloud-customers.services.clever-cloud.com/app_30cde629-8a53-4966-a72d-2af0ec4d01b0.git",
+      "name": "cnd1-backend",
+      "alias": "cnd1-backend"
+    }
+  ]
+}

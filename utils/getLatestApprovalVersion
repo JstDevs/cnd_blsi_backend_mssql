@@ -1,0 +1,38 @@
+const { ApprovalMatrix, documentType } = require('../config/database');
+const { Op, fn, col } = require('sequelize');
+
+async function getLatestApprovalVersion(likeString) {
+  try {
+    const result = await ApprovalMatrix.findOne({
+      attributes: [
+        [fn('MAX', col('Version')), 'LatestVersion']
+      ],
+      include: [{
+        model: documentType,
+        as: 'DocumentType',
+        attributes: [],
+        where: {
+          Name: { [Op.like]: `%${likeString}%` }
+        }
+      }],
+      where: {
+        Active: true
+      },
+      raw: true
+    });
+
+    const version = result?.LatestVersion;
+
+    if (!version) {
+      throw new Error("Version of Approval Workflow doesn't exist. Create an approval for this document type first!");
+    }
+
+    return version;
+
+  } catch (err) {
+    console.warn('⚠️ Approval matrix not found:', err.message);
+    throw new Error('The approval matrix has not been set for this document type! Create it first');
+  }
+}
+
+module.exports = getLatestApprovalVersion;

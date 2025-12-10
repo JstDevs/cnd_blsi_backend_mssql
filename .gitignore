@@ -1,0 +1,17 @@
+#dependencies
+node_modules/
+build/
+
+#local env
+
+#customer data
+public/data/
+public/uploads/
+public/exports/
+
+.env
+
+#extra_files
+package-lock.json
+
+rough_work.txt

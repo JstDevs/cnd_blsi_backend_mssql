@@ -1,0 +1,190 @@
+const db=require('../config/database')
+const BudgetModel = require('../config/database').Budget;
+const DocumentTypeModel = require('../config/database').documentType;
+const TransactionTableModel = require('../config/database').TransactionTable;
+const AttachmentModel = require('../config/database').Attachment;
+const CheckModel = require('../config/database').Check;
+const TransactionItemModel = require('../config/database').TransactionItems;
+const FiscalYearModel = require('../config/database').FiscalYear;
+const DepartmentModel = require('../config/database').department;
+const SubDepartmentModel = require('../config/database').subDepartment;
+const ChartOfAccountsModel = require('../config/database').ChartofAccounts;
+const FundModel = require('../config/database').Funds;
+const ProjectModel = require('../config/database').Project;
+
+const { Op } = require('sequelize');
+const generateLinkID = require("../utils/generateID")
+const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
+
+exports.save = async (req, res) => {
+  const t = await db.sequelize.transaction();
+  try {
+    const parsedFields = {};
+    
+    // Reconstruct Attachments array from fields like Attachments[0].ID starts
+    const attachments = [];
+    for (const key in req.body) {
+      const match = key.match(/^Attachments\[(\d+)]\.(\w+)$/);
+      if (match) {
+        const index = parseInt(match[1]);
+        const field = match[2];
+
+        if (!attachments[index]) attachments[index] = {};
+        attachments[index][field] = req.body[key];
+      }
+    }
+    parsedFields.Attachments = attachments;
+    // Reconstruct Attachments array from fields like Attachments[0].ID ends
+    
+    for (const key in req.body) {
+      try {
+        parsedFields[key] = JSON.parse(req.body[key]);
+      } catch {
+        parsedFields[key] = req.body[key];
+      }
+    }
+
+    const {
+      Attachments = [],
+    } = parsedFields;
+
+    const data = parsedFields;
+
+    let IsNew = '';
+    if((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
+      IsNew = true;
+    }
+    else if((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
+      IsNew = false;
+    }
+    else {
+      throw new Error('Invalid value for IsNew. Expected true or false.');
+    }
+    
+    let AddCondition = '';
+    if((data.AddCondition == "true") || (data.AddCondition === true) || (data.AddCondition == '1') || (data.AddCondition == 1)) {
+      AddCondition = true;
+    }
+    else if((data.AddCondition == "false") || (data.AddCondition === false) || (data.AddCondition == '0') || (data.AddCondition == 0)) {
+      AddCondition = false;
+    }
+    else {
+      throw new Error('Invalid value for AddCondition. Expected true or false.');
+    }
+
+    const refID = IsNew ? generateLinkID() : data.LinkID;
+    const userID = req.user.id;
+    const approvalVersion = await getLatestApprovalVersion('Check');
+
+    if (IsNew) {
+      await CheckModel.create({
+        Status: 'Requested',
+        LinkID: refID,
+        DisbursementID: data.DisbursementID,
+        BankID: data.BankID,
+        SignatoryType: data.SignatoryType,
+        AccountNumber: data.AccountNumber,
+        AccountName: data.AccountName,
+        CheckNumber: data.CheckNumber,
+        BRSTN: data.BRSTN,
+        CheckDate: data.CheckDate,
+        Payee: data.Payee,
+        Amount: data.Amount,
+        Words: data.Words,
+        SignatoryOneID: data.SignatoryOneID,
+        SignatoryTwoID: data.SignatoryTwoID,
+        Remarks: data.Remarks,
+        Active: true,
+        CreatedBy: userID,
+        CreatedDate: new Date(),
+        ApprovalProgress: 0,
+        ApprovalVersion: approvalVersion
+      }, { transaction: t });
+
+      if (AddCondition) {
+        await TransactionTableModel.update(
+          { Status: 'Posted, Cheque Requested' },
+          { where: { LinkID: data.DisbursementID }, transaction: t }
+        );
+        await TransactionTableModel.update(
+          { Status: 'Posted, Disbursement Posted, Cheque Requested' },
+          { where: { InvoiceNumber: data.OBR }, transaction: t }
+        );
+      }
+    } else {
+      await CheckModel.update({
+        Status: 'Requested',
+        DisbursementID: data.DisbursementID,
+        BankID: data.BankID,
+        SignatoryType: data.SignatoryType,
+        AccountNumber: data.AccountNumber,
+        AccountName: data.AccountName,
+        CheckNumber: data.CheckNumber,
+        BRSTN: data.BRSTN,
+        CheckDate: data.CheckDate,
+        Payee: data.Payee,
+        Amount: data.Amount,
+        Words: data.Words,
+        SignatoryOneID: data.SignatoryOneID,
+        SignatoryTwoID: data.SignatoryTwoID,
+        Remarks: data.Remarks,
+        Active: true,
+        ModifyBy: userID,
+        ModifyDate: new Date(),
+        ApprovalProgress: 0,
+        ApprovalVersion: approvalVersion
+      }, {
+        where: { ID: data.ID },
+        transaction: t
+      });
+    }
+
+    // Delete removed attachments (if applicable)
+    const existingIDs = Attachments.filter(att => att.ID).map(att => att.ID);
+    if (!IsNew && existingIDs.length > 0) {
+      await AttachmentModel.destroy({
+        where: {
+          LinkID: LinkID,
+          ID: { [Op.notIn]: existingIDs }
+        },
+        transaction: t
+      });
+    }
+
+    // Add new attachments
+    if (req.files && req.files.length > 0) {
+      const newAttachments = req.files.map(file => ({
+        LinkID: LinkID,
+        DataName: file.originalname,
+        DataType: file.mimetype,
+        DataImage: `${req.uploadPath}/${file.filename}`
+      }));
+
+      await AttachmentModel.bulkCreate(newAttachments, { transaction: t });
+    }
+
+    await t.commit();
+    res.json({ message: 'success' });
+  } catch (err) {
+    await t.rollback();
+    console.error('Save Check Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.checkList = async (req, res) => {
+  try {
+    const checks = await CheckModel.findAll({
+      where: { Active: true },
+    });
+
+    res.json(checks);
+  } catch (err) {
+    console.error('Error loading checks:', err);
+    res.status(500).json({ error: 'Error loading checks.', details: err.message });
+  }
+};
+
+exports.delete = async (req, res) => {
+  res.json({ message: 'Deleted logic not implemented, same in old software' });
+};

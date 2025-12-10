@@ -14,6 +14,7 @@ const controller = require('../controllers/financialStatementsReports');
 const requireAuth = require('../middleware/requireAuth');
 
 router.post('/view', requireAuth, controller.view);
+router.post('/generate', requireAuth, controller.generate);
 router.post('/exportExcel', requireAuth, controller.exportExcel);
 
 module.exports = router;

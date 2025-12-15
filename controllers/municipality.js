@@ -12,7 +12,7 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await municipality.findAll();
+    const items = await municipality.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -21,7 +21,7 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await municipality.findByPk(req.params.id);
+    const item = await municipality.findOne({ where: { id: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "municipality not found" });
   } catch (err) {
@@ -33,7 +33,7 @@ exports.update = async (req, res) => {
   try {
     const { Name, RegionCode, ProvinceCode } = req.body;
     const [updated] = await municipality.update({ Name, RegionCode, ProvinceCode, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+      where: { id: req.params.id, Active: true }
     });
     if (updated) {
       const updatedItem = await municipality.findByPk(req.params.id);
@@ -48,8 +48,11 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const deleted = await municipality.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "municipality deleted" });
+    const [updated] = await municipality.update(
+      { Active: false, ModifyBy: req.user?.id ?? 1, ModifyDate: new Date() },
+      { where: { id: req.params.id, Active: true } }
+    );
+    if (updated) res.json({ message: "municipality deactivated" });
     else res.status(404).json({ message: "municipality not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });

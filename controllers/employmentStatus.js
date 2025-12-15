@@ -12,7 +12,7 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await employmentStatus.findAll();
+    const items = await employmentStatus.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -21,7 +21,7 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await employmentStatus.findByPk(req.params.id);
+    const item = await employmentStatus.findOne({ where: { id: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "employmentStatus not found" });
   } catch (err) {
@@ -32,8 +32,8 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { Name } = req.body;
-    const [updated] = await employmentStatus.update({ Name, CreatedBy: req.user.id, CreatedDate: new Date(), ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+    const [updated] = await employmentStatus.update({ Name, ModifyBy: req.user.id, ModifyDate: new Date() }, {
+      where: { id: req.params.id, Active: true }
     });
     if (updated) {
       const updatedItem = await employmentStatus.findByPk(req.params.id);
@@ -48,8 +48,11 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const deleted = await employmentStatus.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "employmentStatus deleted" });
+    const [updated] = await employmentStatus.update(
+      { Active: false, ModifyBy: req.user?.id ?? 1, ModifyDate: new Date() },
+      { where: { id: req.params.id, Active: true } }
+    );
+    if (updated) res.json({ message: "employmentStatus deactivated" });
     else res.status(404).json({ message: "employmentStatus not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });

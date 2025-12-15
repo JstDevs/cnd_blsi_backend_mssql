@@ -14,7 +14,7 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await getAllWithAssociations(userAccess);
+    const items = await getAllWithAssociations(userAccess, 2, { Active: true });
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -23,7 +23,7 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await userAccess.findByPk(req.params.id);
+    const item = await userAccess.findOne({ where: { id: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "userAccess not found" });
   } catch (err) {
@@ -35,7 +35,7 @@ exports.update = async (req, res) => {
   try {
     const { Description, Active, CreatedBy, CreatedDate } = req.body;
     const [updated] = await userAccess.update({ Description, Active, CreatedBy, CreatedDate }, {
-      where: { id: req.params.id }
+      where: { id: req.params.id, Active: true }
     });
     if (updated) {
       const updatedItem = await userAccess.findByPk(req.params.id);
@@ -50,8 +50,11 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const deleted = await userAccess.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "userAccess deleted" });
+    const [updated] = await userAccess.update(
+      { Active: false, ModifyBy: req?.user?.id ?? 1, ModifyDate: new Date() },
+      { where: { id: req.params.id, Active: true } }
+    );
+    if (updated) res.json({ message: "userAccess deactivated" });
     else res.status(404).json({ message: "userAccess not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });

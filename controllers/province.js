@@ -12,7 +12,7 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await province.findAll();
+    const items = await province.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -21,7 +21,7 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await province.findByPk(req.params.id);
+    const item = await province.findOne({ where: { id: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "province not found" });
   } catch (err) {
@@ -33,7 +33,7 @@ exports.update = async (req, res) => {
   try {
     const { RegionCode, Name } = req.body;
     const [updated] = await province.update({ RegionCode, Name, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+      where: { id: req.params.id, Active: true }
     });
     if (updated) {
       const updatedItem = await province.findByPk(req.params.id);
@@ -48,8 +48,11 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const deleted = await province.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "province deleted" });
+    const [updated] = await province.update(
+      { Active: false, ModifyBy: req.user?.id ?? 1, ModifyDate: new Date() },
+      { where: { id: req.params.id, Active: true } }
+    );
+    if (updated) res.json({ message: "province deactivated" });
     else res.status(404).json({ message: "province not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });

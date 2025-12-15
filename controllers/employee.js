@@ -67,7 +67,7 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await getAllWithAssociations(db.employee,1)
+    const items = await getAllWithAssociations(db.employee, 1, { Active: true })
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -76,7 +76,7 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await employee.findByPk(req.params.id);
+    const item = await employee.findOne({ where: { id: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "employee not found" });
   } catch (err) {
@@ -162,7 +162,7 @@ exports.update = async (req, res) => {
         
       },
       {
-        where: { id: req.params.id }
+        where: { id: req.params.id, Active: true }
       }
     );
 
@@ -181,8 +181,11 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const deleted = await employee.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "employee deleted" });
+    const [updated] = await employee.update(
+      { Active: false, ModifyBy: req.user?.id ?? 1, ModifyDate: new Date() },
+      { where: { id: req.params.id, Active: true } }
+    );
+    if (updated) res.json({ message: "employee deactivated" });
     else res.status(404).json({ message: "employee not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });

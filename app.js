@@ -14,10 +14,11 @@ const corsOptions = {
       'https://cnd-project.vercel.app',
       'https://staging-canvas.testthelink.online',
       'http://localhost:3000',
-      'http://127.0.0.1:3000'
+      'http://127.0.0.1:3000',
+      'http://192.168.1.215:3000', // allow LAN frontend host
     ];
 
-    // Allow requests with no origin (Postman, curl, mobile apps
+    // Allow requests with no origin (Postman, curl, mobile apps)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {

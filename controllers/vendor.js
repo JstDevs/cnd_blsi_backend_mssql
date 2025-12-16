@@ -12,7 +12,8 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await vendor.findAll();
+    // Only return active vendors
+    const items = await vendor.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
     console.error(err);
@@ -22,7 +23,7 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await vendor.findByPk(req.params.id);
+    const item = await vendor.findOne({ where: { id: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "vendor not found" });
   } catch (err) {
@@ -34,7 +35,7 @@ exports.update = async (req, res) => {
   try {
     const { Code, Name, PaymentTermsID, PaymentMethodID, DeliveryLeadTime, TIN, RDO, Vatable, TaxCodeID, TypeID, IndustryTypeID, ContactPerson, PhoneNumber, MobileNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode  } = req.body;
     const [updated] = await vendor.update({ Code, Name, PaymentTermsID, PaymentMethodID, DeliveryLeadTime, TIN, RDO, Vatable, TaxCodeID, TypeID, IndustryTypeID, ContactPerson, PhoneNumber, MobileNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+      where: { id: req.params.id, Active: true }
     });
     if (updated) {
       const updatedItem = await vendor.findByPk(req.params.id);
@@ -47,10 +48,14 @@ exports.update = async (req, res) => {
   }
 };
 
+// SOFT DELETE: Sets Active = false instead of removing from database
 exports.delete = async (req, res) => {
   try {
-    const deleted = await vendor.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "vendor deleted" });
+    const [updated] = await vendor.update(
+      { Active: false, ModifyBy: req.user?.id ?? 1, ModifyDate: new Date() },
+      { where: { id: req.params.id, Active: true } }
+    );
+    if (updated) res.json({ message: "vendor deactivated" });
     else res.status(404).json({ message: "vendor not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });

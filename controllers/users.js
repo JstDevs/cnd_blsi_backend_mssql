@@ -43,8 +43,9 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const items= await getAllWithAssociations(db.users,2)
-    // const items = await users.findAll();
+    // Only return active users
+    const items= await getAllWithAssociations(db.users,2,{ Active: true })
+    // const items = await users.findAll({ where: { Active: true } });
     res.json({
       status:true,
       items
@@ -56,7 +57,7 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await users.findByPk(req.params.id);
+    const item = await users.findOne({ where: { id: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "users not found" });
   } catch (err) {
@@ -83,7 +84,7 @@ exports.update = async (req, res) => {
     Password = await hashPassword(Password);
 
     const [updated] = await users.update({ EmployeeID, UserName, Password }, {
-      where: { id: req.params.id }
+      where: { id: req.params.id, Active: true }
     });
     let updatedItem;
     if (updated) {
@@ -112,10 +113,14 @@ exports.update = async (req, res) => {
   }
 };
 
+// SOFT DELETE: Sets Active = false instead of removing from database
 exports.delete = async (req, res) => {
   try {
-    const deleted = await users.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "users deleted" });
+    const [updated] = await users.update(
+      { Active: false, CreatedBy: req.user?.id ?? 1, CreatedDate: new Date() },
+      { where: { id: req.params.id, Active: true } }
+    );
+    if (updated) res.json({ message: "users deactivated" });
     else res.status(404).json({ message: "users not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });

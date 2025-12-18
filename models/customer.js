@@ -97,7 +97,8 @@ module.exports = function(sequelize, DataTypes) {
     },
     Active: {
       type: DataTypes.BOOLEAN,
-      allowNull: true
+      allowNull: false,
+      defaultValue: true
     },
     CreatedBy: {
       type: DataTypes.STRING(150),

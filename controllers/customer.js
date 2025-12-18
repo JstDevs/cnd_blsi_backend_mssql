@@ -4,7 +4,9 @@ const customer = Customer;
 exports.create = async (req, res) => {
   try {
     const { Code, Name, PaymentTermsID, PaymentMethodID, TIN, RDO, TaxCodeID, TypeID, IndustryTypeID, ContactPerson, PhoneNumber, MobileNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate, FirstName, MiddleName, LastName, CivilStatus, PlaceofBirth, Gender, Height, Weight, Birthdate, Citizenship, Occupation, ICRNumber, Type, PlaceofIncorporation, KindofOrganization, DateofRegistration } = req.body;
-    const item = await customer.create({ Code, Name, PaymentTermsID, PaymentMethodID, TIN, RDO, TaxCodeID, TypeID, IndustryTypeID, ContactPerson, PhoneNumber, MobileNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate, FirstName, MiddleName, LastName, CivilStatus, PlaceofBirth, Gender, Height, Weight, Birthdate, Citizenship, Occupation, ICRNumber, Type, PlaceofIncorporation, KindofOrganization, DateofRegistration });
+    // Default Active to true if not provided or null/undefined
+    const activeValue = Active !== undefined && Active !== null ? Active : true;
+    const item = await customer.create({ Code, Name, PaymentTermsID, PaymentMethodID, TIN, RDO, TaxCodeID, TypeID, IndustryTypeID, ContactPerson, PhoneNumber, MobileNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, Active: activeValue, CreatedBy, CreatedDate, ModifyBy, ModifyDate, FirstName, MiddleName, LastName, CivilStatus, PlaceofBirth, Gender, Height, Weight, Birthdate, Citizenship, Occupation, ICRNumber, Type, PlaceofIncorporation, KindofOrganization, DateofRegistration });
     res.status(201).json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -33,7 +35,9 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { Code, Name, PaymentTermsID, PaymentMethodID, TIN, RDO, TaxCodeID, TypeID, IndustryTypeID, ContactPerson, PhoneNumber, MobileNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate, FirstName, MiddleName, LastName, CivilStatus, PlaceofBirth, Gender, Height, Weight, Birthdate, Citizenship, Occupation, ICRNumber, Type, PlaceofIncorporation, KindofOrganization, DateofRegistration } = req.body;
-    const [updated] = await customer.update({ Code, Name, PaymentTermsID, PaymentMethodID, TIN, RDO, TaxCodeID, TypeID, IndustryTypeID, ContactPerson, PhoneNumber, MobileNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate, FirstName, MiddleName, LastName, CivilStatus, PlaceofBirth, Gender, Height, Weight, Birthdate, Citizenship, Occupation, ICRNumber, Type, PlaceofIncorporation, KindofOrganization, DateofRegistration }, {
+    // Ensure Active is never null - default to true if not provided or null/undefined
+    const activeValue = Active !== undefined && Active !== null ? Active : true;
+    const [updated] = await customer.update({ Code, Name, PaymentTermsID, PaymentMethodID, TIN, RDO, TaxCodeID, TypeID, IndustryTypeID, ContactPerson, PhoneNumber, MobileNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, Active: activeValue, CreatedBy, CreatedDate, ModifyBy, ModifyDate, FirstName, MiddleName, LastName, CivilStatus, PlaceofBirth, Gender, Height, Weight, Birthdate, Citizenship, Occupation, ICRNumber, Type, PlaceofIncorporation, KindofOrganization, DateofRegistration }, {
       where: { id: req.params.id, Active: true }
     });
     if (updated) {

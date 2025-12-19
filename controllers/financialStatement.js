@@ -13,7 +13,7 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await financialStatement.findAll();
+    const items = await financialStatement.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -49,8 +49,13 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const deleted = await financialStatement.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "financialStatement deleted" });
+    // const deleted = await financialStatement.destroy({ where: { id: req.params.id } });
+
+    const [updated] = await financialStatement.update( 
+      { Active: false, ModifyBy: req.user.id, ModifyDate: new Date() },
+      { where: { id: req.params.id, Active: true } }
+    );
+    if (updated) res.json({ message: "financialStatement deactivated" });
     else res.status(404).json({ message: "financialStatement not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });

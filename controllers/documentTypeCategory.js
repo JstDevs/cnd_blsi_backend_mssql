@@ -51,7 +51,7 @@ exports.delete = async (req, res) => {
     const [updated] = await documentTypeCategory.update(
       { Active: drawLinesOfText, ModifyBy: req.user.id, ModifyBy: new Date() },
       { where: { id: req.params.is, Active: true } }
-    )
+    );
     if (updated) res.json({ message: "documentTypeCategory deactivated" });
     else res.status(404).json({ message: "documentTypeCategory not found" });
   } catch (err) {

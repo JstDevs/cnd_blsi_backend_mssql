@@ -65,7 +65,7 @@ exports.delete = async (req, res) => {
     const [updated] = await item.update(
       { Activate: false, ModifyBy: req.user.id, ModifyDate: new Date() },
       { where: { id: req.params.id, Active: true }}
-    )
+    );
     if (updated) res.json({ message: "item deactivated" });
     else res.status(404).json({ message: "item not found" });
   } catch (err) {

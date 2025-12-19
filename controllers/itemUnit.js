@@ -53,7 +53,7 @@ exports.delete = async (req, res) => {
     const [updated] = await itemUnit.update( 
       { Active: false, ModifyBy: req.user.id, ModifyDate: new Date() },
       { where: { id: req.params.id, Active: true } }
-    )
+    );
     if (updated) res.json({ message: "itemUnit deactivated" });
     else res.status(404).json({ message: "itemUnit not found" });
   } catch (err) {

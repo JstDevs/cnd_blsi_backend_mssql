@@ -241,7 +241,8 @@ exports.list = async (req, res) => {
 // SOFT DELETE: Sets Active = false instead of removing from database
 exports.delete = async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = req.params.id || req.body.ID || req.body.id;
+    console.log('[budgetTransfer.delete] called, params.id=', req.params.id, 'body=', req.body);
     const userID = req.user?.id ?? 1;
 
     // Soft delete - sets Active to false in TransactionTable, record remains in database
@@ -268,6 +269,85 @@ exports.delete = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Recover soft-deleted transfer transaction
+exports.recover = async (req, res) => {
+  try {
+    const id = req.params.id || req.body.ID || req.body.id;
+    console.log('[budgetTransfer.recover] called, params.id=', req.params.id, 'body=', req.body);
+    const userID = req.user?.id ?? 1;
+
+    const [updated] = await TransactionTableModel.update(
+      {
+        Active: true,
+        ModifyBy: userID,
+        ModifyDate: new Date(),
+      },
+      {
+        where: { ID: id }
+      }
+    );
+
+    if (updated) {
+      res.json({ message: 'success' });
+    } else {
+      res.status(404).json({ message: 'not found or already active' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.approveTransaction = async (req, res) => {
+  const {
+    id,
+    ID,
+    approvalProgress,
+    varApprovalLink,
+    varLinkID,
+    approvalOrder,
+    numberOfApproverPerSequence,
+    userEmployeeID,
+    strUser,
+    varTransactionApprovalVersion,
+    varBudgetID
+  } = req.body;
+
+  const txnId = ID || id;
+  const t = await db.sequelize.transaction();
+  try {
+    await TransactionTableModel.update(
+      { ApprovalProgress: approvalProgress, Status: 'Approved' },
+      { where: { ID: txnId }, transaction: t }
+    );
+
+    await ApprovalAuditModel.create(
+      {
+        LinkID: varApprovalLink,
+        InvoiceLink: varLinkID,
+        PositionorEmployee: 'Employee',
+        PositionorEmployeeID: userEmployeeID,
+        SequenceOrder: approvalOrder,
+        ApprovalOrder: numberOfApproverPerSequence,
+        ApprovalDate: new Date(),
+        RejectionDate: null,
+        Remarks: null,
+        CreatedBy: strUser,
+        CreatedDate: new Date(),
+        ApprovalVersion: varTransactionApprovalVersion
+      },
+      { transaction: t }
+    );
+
+    await t.commit();
+    res.json({ success: true, message: 'Data saved successfully.' });
+  } catch (err) {
+    await t.rollback();
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 

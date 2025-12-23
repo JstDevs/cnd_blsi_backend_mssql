@@ -386,7 +386,16 @@ module.exports = function(sequelize, DataTypes) {
   }, {
     sequelize,
     tableName: 'transactiontable',
-  
-    timestamps: false
+    timestamps: false,
+    defaultScope: {
+      where: {
+        Active: true
+      }
+    },
+    scopes: {
+      withInactive: {
+        where: {}
+      }
+    }
   });
 };

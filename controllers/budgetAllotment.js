@@ -275,6 +275,35 @@ exports.delete = async (req, res) => {
   }
 };
 
+// Recover (undo soft-delete) - sets Active = true
+exports.recover = async (req, res) => {
+  try {
+    const id = req.params.id || req.body.ID || req.body.id;
+    console.log('[budgetAllotment.recover] called, params.id=', req.params.id, 'body=', req.body);
+    const userID = req.user?.id ?? 1;
+
+    const [updated] = await TransactionTableModel.update(
+      {
+        Active: true,
+        ModifyBy: userID,
+        ModifyDate: new Date(),
+      },
+      {
+        where: { ID: id }
+      }
+    );
+
+    if (updated) {
+      res.json({ message: 'success' });
+    } else {
+      res.status(404).json({ message: 'not found or already active' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.approveTransaction = async (req, res) => {
   const {
     id,

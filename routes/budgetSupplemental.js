@@ -14,5 +14,6 @@ router.delete('/:id', requireAuth, controller.delete);
 router.post('/approve', requireAuth, controller.approveTransaction);
 router.post('/reject', requireAuth, controller.rejectTransaction);
 router.post('/delete', requireAuth, controller.delete);
+router.post('/recover', requireAuth, controller.recover);
 
 module.exports = router;

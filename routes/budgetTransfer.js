@@ -12,5 +12,8 @@ router.get('/list', requireAuth, controller.list);
 // router.put('/:id', requireAuth, controller.update);
 router.delete('/:id', requireAuth, controller.delete);
 router.post('/reject', requireAuth, controller.rejectTransaction);
+router.post('/approve', requireAuth, controller.approveTransaction);
+router.post('/recover', requireAuth, controller.recover);
+router.post('/delete', requireAuth, controller.delete);
 
 module.exports = router;

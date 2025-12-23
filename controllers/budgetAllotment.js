@@ -9,6 +9,7 @@ const SubDepartmentModel = require('../config/database').subDepartment;
 const ChartOfAccountsModel = require('../config/database').ChartofAccounts;
 const FundModel = require('../config/database').Funds;
 const ProjectModel = require('../config/database').Project;
+const ApprovalAuditModel = require('../config/database').ApprovalAudit;
 
 const { Op, where } = require('sequelize');
 const generateLinkID = require("../utils/generateID")
@@ -270,5 +271,90 @@ exports.delete = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+exports.approveTransaction = async (req, res) => {
+  const {
+    id,
+    ID,
+    approvalProgress,
+    varApprovalLink,
+    varLinkID,
+    approvalOrder,
+    numberOfApproverPerSequence,
+    userEmployeeID,
+    strUser,
+    varTransactionApprovalVersion,
+    varBudgetID
+  } = req.body;
+
+  // Accept either `id` or `ID` from the frontend
+  const txnId = ID || id;
+
+  const t = await db.sequelize.transaction();
+  try {
+    // Update approval progress and mark Approved
+    await TransactionTableModel.update(
+      { ApprovalProgress: approvalProgress, Status: 'Approved' },
+      { where: { ID: txnId }, transaction: t }
+    );
+
+    await ApprovalAuditModel.create(
+      {
+        LinkID: varApprovalLink,
+        InvoiceLink: varLinkID,
+        PositionorEmployee: 'Employee',
+        PositionorEmployeeID: userEmployeeID,
+        SequenceOrder: approvalOrder,
+        ApprovalOrder: numberOfApproverPerSequence,
+        ApprovalDate: new Date(),
+        RejectionDate: null,
+        Remarks: null,
+        CreatedBy: strUser,
+        CreatedDate: new Date(),
+        ApprovalVersion: varTransactionApprovalVersion
+      },
+      { transaction: t }
+    );
+
+    await t.commit();
+    res.json({ success: true, message: 'Data saved successfully.' });
+  } catch (err) {
+    await t.rollback();
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.rejectTransaction = async (req, res) => {
+  const {
+    ID: id,
+    LinkID: varApprovalLink,
+    Reason: reasonForRejection,
+  } = req.body;
+
+  const t = await db.sequelize.transaction();
+  try {
+    await TransactionTableModel.update(
+      { Status: "Rejected" },
+      { where: { ID: id }, transaction: t }
+    );
+
+    await ApprovalAuditModel.create(
+      {
+        LinkID: varApprovalLink,
+        RejectionDate: new Date(),
+        Remarks: reasonForRejection,
+        CreatedBy: req.user.id,
+        CreatedDate: new Date()
+      },
+      { transaction: t }
+    );
+
+    await t.commit();
+    res.json({ message: "Transaction rejected successfully." });
+  } catch (err) {
+    await t.rollback();
+    res.status(500).json({ error: err.message });
   }
 };

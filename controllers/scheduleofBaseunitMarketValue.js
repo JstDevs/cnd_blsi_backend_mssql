@@ -4,7 +4,15 @@ const scheduleofBaseunitMarketValue = ScheduleofBaseunitMarketValue;
 
 exports.create = async (req, res) => {
   try {
-    const { GeneralRevisionYear, Classification, Location, Unit, ActualUse, SubClassification, Price, Createdby, CreatedDate, Modifiedby, ModifiedDate, Active, UsingStatus } = req.body;
+    const { GeneralRevisionYear, Classification, Location, Unit, ActualUse, SubClassification, Price, Createdby } = req.body;
+
+    const CreatedDate = req.body.CreatedDate || new Date().toISOString().slice(0,10);
+    const Modifiedby = req.body.Modifiedby || null;
+    const ModifiedDate = req.body.ModifiedDate || null;
+    const UsingStatus = req.body.UsingStatus || null;
+    // Ensure Active defaults to true when not provided
+    const Active = (req.body.Active !== undefined && req.body.Active !== null) ? req.body.Active : true;
+
     const item = await scheduleofBaseunitMarketValue.create({ GeneralRevisionYear, Classification, Location, Unit, ActualUse, SubClassification, Price, Createdby, CreatedDate, Modifiedby, ModifiedDate, Active, UsingStatus });
     res.status(201).json(item);
   } catch (err) {
@@ -39,7 +47,7 @@ exports.update = async (req, res) => {
   try {
     const { GeneralRevisionYear, Classification, Location, Unit, ActualUse, SubClassification, Price, Createdby, CreatedDate, Modifiedby, ModifiedDate, Active, UsingStatus } = req.body;
     const [updated] = await scheduleofBaseunitMarketValue.update({ GeneralRevisionYear, Classification, Location, Unit, ActualUse, SubClassification, Price, Createdby, CreatedDate, Modifiedby, ModifiedDate, Active, UsingStatus }, {
-      where: { id: req.params.id }
+      where: { ID: req.params.id }
     });
     if (updated) {
       const updatedItem = await scheduleofBaseunitMarketValue.findByPk(req.params.id);
@@ -54,9 +62,12 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
+    const modifiedBy = req.user?.id ? String(req.user.id) : null;
+    const modifiedDate = new Date().toISOString().slice(0,10);
+
     const [updated] = await scheduleofBaseunitMarketValue.update(
-      { Active: false, Modifiedby: req.user.id, ModifiedDate: new Date() },
-      { where: { id: req.params.id, Active: true } }
+      { Active: false, Modifiedby: modifiedBy, ModifiedDate: modifiedDate },
+      { where: { ID: req.params.id, Active: true } }
     );
     if (updated) res.json({ message: "scheduleofBaseunitMarketValue deactivated" });
     else res.status(404).json({ message: "scheduleofBaseunitMarketValue not found" });

@@ -53,7 +53,8 @@ module.exports = function(sequelize, DataTypes) {
     },
     Active: {
       type: DataTypes.BOOLEAN,
-      allowNull: true
+      allowNull: true,
+      defaultValue: true
     },
     UsingStatus: {
       type: DataTypes.BOOLEAN,

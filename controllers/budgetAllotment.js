@@ -19,13 +19,14 @@ exports.save = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
     const parsedFields = {};
+    console.log('[BudgetAllotment.save] req.body:', req.body);
+    console.log('[BudgetAllotment.save] req.files:', req.files);
 
-
-    // Reconstruct Attachments array from fields like Attachments[0].ID starts
     const attachments = [];
     for (const key in req.body) {
       const match = key.match(/^Attachments\[(\d+)]\.(\w+)$/);
       if (match) {
+        console.log('[BudgetAllotment.save] Found attachment field:', key);
         const index = parseInt(match[1]);
         const field = match[2];
 
@@ -34,6 +35,7 @@ exports.save = async (req, res) => {
       }
     }
     parsedFields.Attachments = attachments;
+    console.log('[BudgetAllotment.save] Reconstructed attachments:', attachments);
     // Reconstruct Attachments array from fields like Attachments[0].ID ends
 
 
@@ -44,6 +46,7 @@ exports.save = async (req, res) => {
         parsedFields[key] = req.body[key];
       }
     }
+    console.log('[BudgetAllotment.save] parsedFields:', parsedFields);
 
     const {
       Attachments = [],
@@ -63,10 +66,20 @@ exports.save = async (req, res) => {
     }
 
     const userID = req.user.id;
-    const amount = parseFloat(data.AllotmentAmount);
+    const amount = parseFloat(data.Allotment);
+    console.log('[BudgetAllotment.save] Calculated amount:', amount, 'from data.Allotment:', data.Allotment, 'userID:', userID);
 
     const LinkID = (IsNew) ? generateLinkID() : data.LinkID;
-    const latestapprovalversion = await getLatestApprovalVersion('Allotment Release Order');
+    console.log('[BudgetAllotment.save] LinkID:', LinkID, 'IsNew:', IsNew);
+
+    let latestapprovalversion;
+    try {
+      latestapprovalversion = await getLatestApprovalVersion('Allotment Release Order');
+      console.log('[BudgetAllotment.save] Latest approval version:', latestapprovalversion);
+    } catch (err) {
+      console.error('[BudgetAllotment.save] Error getting approval version:', err.message);
+      throw err;
+    }
 
     let invoiceText = '';
 
@@ -78,6 +91,7 @@ exports.save = async (req, res) => {
       invoiceText = `${doc.Prefix}-${String(doc.CurrentNumber).padStart(5, '0')}-${doc.Suffix}`;
 
       // Step 2: Insert into TransactionTable
+      console.log('[BudgetAllotment.save] Creating transaction with amount:', amount);
       await TransactionTableModel.create({
         LinkID: LinkID,
         Status: 'Requested',
@@ -85,7 +99,7 @@ exports.save = async (req, res) => {
         DocumentTypeID: 20,
         RequestedBy: userID,
         InvoiceDate: new Date(),
-        AmountInWords: data.AmountInWords,
+        AmountinWords: data.AmountInWords, // Changed from AmountInWords to AmountinWords
         InvoiceNumber: invoiceText,
         Total: amount,
         Active: true,
@@ -207,7 +221,16 @@ exports.getAll = async (req, res) => {
       order: [['CreatedDate', 'DESC']],
     });
 
-    res.json(records);
+    const formattedRecords = records.map(record => {
+      const plain = record.get({ plain: true });
+      return {
+        ...plain,
+        allotment: plain.Total,
+        Allotment: plain.Total
+      };
+    });
+
+    res.json(formattedRecords);
   } catch (err) {
     console.error('Error loading:', err);
     res.status(500).json({ error: err.message || 'Error loading data.' });
@@ -321,6 +344,7 @@ exports.approveTransaction = async (req, res) => {
 
   // Accept either `id` or `ID` from the frontend
   const txnId = ID || id;
+  console.log('[BudgetAllotment.approveTransaction] Called with:', { txnId, varBudgetID, approvalProgress });
 
   const t = await db.sequelize.transaction();
   try {
@@ -347,6 +371,38 @@ exports.approveTransaction = async (req, res) => {
       },
       { transaction: t }
     );
+
+    // Update Budget table: increment Released and recalculate AllotmentBalance
+    console.log('[BudgetAllotment.approveTransaction] Updating Budget table for BudgetID:', varBudgetID);
+
+    // Get the transaction to retrieve BudgetID if not provided
+    const transaction = await TransactionTableModel.findByPk(txnId, { transaction: t });
+    const budgetID = varBudgetID || transaction?.BudgetID;
+    const allotmentAmount = transaction?.Total || 0;
+
+    console.log('[BudgetAllotment.approveTransaction] Retrieved BudgetID:', budgetID, 'Amount:', allotmentAmount);
+
+    if (budgetID) {
+      const budget = await BudgetModel.findByPk(budgetID, { transaction: t });
+      if (budget) {
+        const currentReleased = parseFloat(budget.Released || 0);
+        const newReleased = currentReleased + parseFloat(allotmentAmount);
+
+        const appropriation = parseFloat(budget.Appropriation || 0);
+        const newAllotmentBalance = appropriation - newReleased;
+
+        await BudgetModel.update(
+          {
+            Released: newReleased,
+            AllotmentBalance: newAllotmentBalance,
+            ModifyBy: strUser,
+            ModifyDate: new Date()
+          },
+          { where: { ID: budgetID }, transaction: t }
+        );
+        console.log('[BudgetAllotment.approveTransaction] Budget updated:', { newReleased, newAllotmentBalance });
+      }
+    }
 
     await t.commit();
     res.json({ success: true, message: 'Data saved successfully.' });

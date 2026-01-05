@@ -342,6 +342,47 @@ exports.approveTransaction = async (req, res) => {
       { transaction: t }
     );
 
+    // Update Budget table: handle transfer between budgets
+    if (varBudgetID) {
+      const transaction = await TransactionTableModel.findByPk(txnId, { transaction: t });
+      const transferAmount = parseFloat(transaction?.Total || 0);
+      const targetBudgetID = transaction?.TargetID;
+
+      // Update source budget (deduct from Transfer)
+      const sourceBudget = await BudgetModel.findByPk(varBudgetID, { transaction: t });
+      if (sourceBudget) {
+        const currentTransfer = parseFloat(sourceBudget.Transfer || 0);
+        const newTransfer = currentTransfer - transferAmount;
+
+        await BudgetModel.update(
+          {
+            Transfer: newTransfer,
+            ModifyBy: strUser,
+            ModifyDate: new Date()
+          },
+          { where: { ID: varBudgetID }, transaction: t }
+        );
+      }
+
+      // Update target budget (add to Transfer)
+      if (targetBudgetID) {
+        const targetBudget = await BudgetModel.findByPk(targetBudgetID, { transaction: t });
+        if (targetBudget) {
+          const currentTransfer = parseFloat(targetBudget.Transfer || 0);
+          const newTransfer = currentTransfer + transferAmount;
+
+          await BudgetModel.update(
+            {
+              Transfer: newTransfer,
+              ModifyBy: strUser,
+              ModifyDate: new Date()
+            },
+            { where: { ID: targetBudgetID }, transaction: t }
+          );
+        }
+      }
+    }
+
     await t.commit();
     res.json({ success: true, message: 'Data saved successfully.' });
   } catch (err) {

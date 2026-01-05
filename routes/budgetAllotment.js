@@ -5,7 +5,7 @@ const requireAuth = require('../middleware/requireAuth');
 const createUploader = require('../middleware/uploadFiles');
 const uploader = createUploader('budgetAllotment');
 
-router.post('/', requireAuth, uploader.any(), controller.save);
+router.post('/save', requireAuth, uploader.any(), controller.save);
 router.get('/list', requireAuth, controller.getAll);
 router.get('/budgetList', requireAuth, controller.budgetList);
 router.post('/approve', requireAuth, controller.approveTransaction);

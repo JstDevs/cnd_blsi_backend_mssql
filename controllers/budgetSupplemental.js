@@ -355,6 +355,27 @@ exports.approveTransaction = async (req, res) => {
       { transaction: t }
     );
 
+    // Update Budget table: increment Supplemental
+    if (varBudgetID) {
+      const transaction = await TransactionTableModel.findByPk(id, { transaction: t });
+      const supplementalAmount = parseFloat(transaction?.Total || 0);
+
+      const budget = await BudgetModel.findByPk(varBudgetID, { transaction: t });
+      if (budget) {
+        const currentSupplemental = parseFloat(budget.Supplemental || 0);
+        const newSupplemental = currentSupplemental + supplementalAmount;
+
+        await BudgetModel.update(
+          {
+            Supplemental: newSupplemental,
+            ModifyBy: strUser,
+            ModifyDate: new Date()
+          },
+          { where: { ID: varBudgetID }, transaction: t }
+        );
+      }
+    }
+
     // Commit
     await t.commit();
     res.json({ success: true, message: "Data saved successfully." });

@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const cors = require('cors'); 
+const cors = require('cors');
 const bodyParser = require('body-parser');
 // app.use(cors());
 // const corsOptions = {
@@ -44,13 +44,13 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 // app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/static/public',express.static(path.join(__dirname, 'public')));
+app.use('/static/public', express.static(path.join(__dirname, 'public')));
 require("dotenv").config();
 const authRoutes = require('./routes/auth');
 // require("./config/database.js");
 const accountcategoryRoutes = require('./routes/accountCategory');
-const generalservicerecipt=require("./routes/generalservicerecipt")
-const taxcertificate=require("./routes/taxcertificate")
+const generalservicerecipt = require("./routes/generalservicerecipt")
+const taxcertificate = require("./routes/taxcertificate")
 const communityTaxIndividualRoutes = require('./routes/communityTaxIndividual');
 const accountsubtypeRoutes = require('./routes/accountSubType');
 const accounttypeRoutes = require('./routes/accountType');
@@ -153,29 +153,29 @@ const vendorRoutes = require('./routes/vendor');
 const vendorcustomertypeRoutes = require('./routes/vendorCustomerType');
 const vendortypeRoutes = require('./routes/vendorType');
 const purchaseRequestRoutes = require('./routes/purchaseRequest');
-const taxcertificatecorp=require('./routes/taxcertificatecorp')
-const realpropertytax=require("./routes/realpropertytax")
-const cashbook=require("./routes/cashbook")
-const collectionReport=require("./routes/collectionreport")
-const publicmarketticket=require("./routes/publicMarketTicketing")
-const saoob=require("./routes/saoob")
-const bir=require("./routes/bir")
-const trialbalance=require("./routes/trialbalance")
-const generalledger=require("./routes/generalLedger")
-const subsidiaryleadger=require("./routes/subsidiaryleadger")
-const trialBalanceReport=require("./routes/trialBalanceReport")
-const financialStatementsReports=require("./routes/financialStatementsReports")
-const statementOfComparison=require("./routes/statementOfComparison")
-const statementOfAppropriations=require("./routes/statementOfAppropriations");
-const budgetReport=require("./routes/budgetReport");
-const budgetDetails=require("./routes/budgetDetails");
-const budgetAllotment=require("./routes/budgetAllotment");
-const budgetSummary=require("./routes/budgetSummary");
-const budgetSupplemental=require("./routes/budgetSupplemental");
-const budgetTransfer=require("./routes/budgetTransfer");
-const fundTransfer=require("./routes/fundTransfer");
-const chequeGenerator=require("./routes/chequeGenerator");
-const profileDashboard=require("./routes/profileDashboard");
+const taxcertificatecorp = require('./routes/taxcertificatecorp')
+const realpropertytax = require("./routes/realpropertytax")
+const cashbook = require("./routes/cashbook")
+const collectionReport = require("./routes/collectionreport")
+const publicmarketticket = require("./routes/publicMarketTicketing")
+const saoob = require("./routes/saoob")
+const bir = require("./routes/bir")
+const trialbalance = require("./routes/trialbalance")
+const generalledger = require("./routes/generalLedger")
+const subsidiaryleadger = require("./routes/subsidiaryleadger")
+const trialBalanceReport = require("./routes/trialBalanceReport")
+const financialStatementsReports = require("./routes/financialStatementsReports")
+const statementOfComparison = require("./routes/statementOfComparison")
+const statementOfAppropriations = require("./routes/statementOfAppropriations");
+const budgetReport = require("./routes/budgetReport");
+const budgetDetails = require("./routes/budgetDetails");
+const budgetAllotment = require("./routes/budgetAllotment");
+const budgetSummary = require("./routes/budgetSummary");
+const budgetSupplemental = require("./routes/budgetSupplemental");
+const budgetTransfer = require("./routes/budgetTransfer");
+const fundTransfer = require("./routes/fundTransfer");
+const chequeGenerator = require("./routes/chequeGenerator");
+const profileDashboard = require("./routes/profileDashboard");
 const { profile } = require('console');
 app.use('/auth', authRoutes);
 app.use('/accountcategory', accountcategoryRoutes);
@@ -280,33 +280,33 @@ app.use('/vendor', vendorRoutes);
 app.use('/vendorcustomertype', vendorcustomertypeRoutes);
 app.use('/vendortype', vendortypeRoutes);
 app.use('/purchaseRequest', purchaseRequestRoutes);
-app.use("/community-tax",taxcertificate)
+app.use("/community-tax", taxcertificate)
 app.use('/communityTaxIndividual', communityTaxIndividualRoutes);
-app.use("/corporate-ctc",taxcertificatecorp)
+app.use("/corporate-ctc", taxcertificatecorp)
 
-app.use("/real-property-tax",realpropertytax)
-app.use("/cashbook",cashbook)
-app.use("/collectionreport",collectionReport)
-app.use("/public-market-ticketing",publicmarketticket)
-app.use("/generalservicerecipt",generalservicerecipt)
-app.use("/saoob",saoob)
-app.use("/bir",bir)
-app.use("/trialbalance",trialbalance)
-app.use("/generalledger",generalledger)
-app.use("/subsidiaryleadger",subsidiaryleadger)
-app.use("/trialBalanceReport",trialBalanceReport)
-app.use("/financialStatementsReports",financialStatementsReports)
-app.use("/statementOfComparison",statementOfComparison);
-app.use("/statementOfAppropriations",statementOfAppropriations);
-app.use("/budgetReport",budgetReport);
-app.use("/budgetDetails",budgetDetails);
-app.use("/budgetAllotment",budgetAllotment);
-app.use("/budgetSummary",budgetSummary);
-app.use("/budgetSupplemental",budgetSupplemental);
-app.use("/budgetTransfer",budgetTransfer);
-app.use("/fundTransfer",fundTransfer);
-app.use("/chequeGenerator",chequeGenerator);
-app.use("/profileDashboard",profileDashboard);
+app.use("/real-property-tax", realpropertytax)
+app.use("/cashbook", cashbook)
+app.use("/collectionreport", collectionReport)
+app.use("/public-market-ticketing", publicmarketticket)
+app.use("/generalservicerecipt", generalservicerecipt)
+app.use("/saoob", saoob)
+app.use("/bir", bir)
+app.use("/trialbalance", trialbalance)
+app.use("/generalledger", generalledger)
+app.use("/subsidiaryleadger", subsidiaryleadger)
+app.use("/trialBalanceReport", trialBalanceReport)
+app.use("/financialStatementsReports", financialStatementsReports)
+app.use("/statementOfComparison", statementOfComparison);
+app.use("/statementOfAppropriations", statementOfAppropriations);
+app.use("/budgetReport", budgetReport);
+app.use("/budgetDetails", budgetDetails);
+app.use("/budgetAllotment", budgetAllotment);
+app.use("/budgetSummary", budgetSummary);
+app.use("/budgetSupplemental", budgetSupplemental);
+app.use("/budgetTransfer", budgetTransfer);
+app.use("/fundTransfer", fundTransfer);
+app.use("/chequeGenerator", chequeGenerator);
+app.use("/profileDashboard", profileDashboard);
 app.get('/', (req, res) => {
   res.send('API Running');
 });

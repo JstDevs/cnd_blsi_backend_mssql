@@ -334,11 +334,14 @@ exports.approveTransaction = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
     // --- UPDATE Transaction Table ---
+    let newStatus = 'Requested';
+
     if (action === "Post") {
+      newStatus = "Posted";
       await TransactionTableModel.update(
         {
           ApprovalProgress: approvalProgress,
-          Status: "Posted"
+          Status: newStatus
         },
         { where: { ID: id }, transaction: t }
       );
@@ -348,7 +351,6 @@ exports.approveTransaction = async (req, res) => {
       // keep as-is if additional helper functions are required
     } else if (action === "Approve") {
       // Determine new status based on approval progress and expected approvers
-      let newStatus = 'Requested';
       if (numberOfApproverPerSequence) {
         if (approvalProgress >= numberOfApproverPerSequence) newStatus = 'Approved';
       } else {
@@ -390,9 +392,25 @@ exports.approveTransaction = async (req, res) => {
         const currentSupplemental = parseFloat(budget.Supplemental || 0);
         const newSupplemental = currentSupplemental + supplementalAmount;
 
+        const appropriation = parseFloat(budget.Appropriation || 0);
+        const transfer = parseFloat(budget.Transfer || 0);
+        const released = parseFloat(budget.Released || 0);
+
+        // Adjusted Appropriation = Appropriation + Supplemental + Transfer
+        const newAdjusted = appropriation + newSupplemental + transfer;
+        const newBalance = newAdjusted - released;
+
+        console.log(`[budgetSupplemental.approveTransaction] Final approval for BudgetID ${varBudgetID}. Updating balances:`, {
+          supplementalAmount,
+          newSupplemental,
+          newBalance
+        });
+
         await BudgetModel.update(
           {
             Supplemental: newSupplemental,
+            AllotmentBalance: newBalance,
+            AppropriationBalance: newBalance,
             ModifyBy: strUser,
             ModifyDate: new Date()
           },

@@ -559,43 +559,75 @@ async function getCurrentNumber(transaction) {
 exports.approveTransaction = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
-    const {
-      ID: transactionId,
-      ApprovalLinkID: varApprovalLink,
-      LinkID: varLinkID,
-      ApprovalProgress: approvalProgress,
-      ApprovalOrder: approvalOrder,
-      NumberOfApproverPerSequence: numberofApproverperSequence,
-      FundsID,
-      ApprovalVersion: varTransactionApprovalVersion
-    } = req.body;
+    const rawBody = req.body || {};
 
-    // 1. Generate Invoice Number
+    // 0. Normalize Payload (handle camelCase and PascalCase variations)
+    let transactionId = rawBody.ID ?? rawBody.id ?? rawBody.transactionId ?? rawBody.TransactionID;
+    let varApprovalLink = rawBody.ApprovalLinkID ?? rawBody.approvalLinkID ?? rawBody.LinkID ?? rawBody.linkID ?? rawBody.linkId;
+    let varLinkID = rawBody.LinkID ?? rawBody.linkID ?? rawBody.linkId ?? rawBody.invoiceLink;
+    let approvalProgress = rawBody.ApprovalProgress ?? rawBody.approvalProgress ?? rawBody.progress;
+    let approvalOrder = rawBody.ApprovalOrder ?? rawBody.approvalOrder ?? rawBody.SequenceOrder ?? rawBody.sequenceOrder;
+    let numberofApproverperSequence = rawBody.NumberOfApproverPerSequence ?? rawBody.numberOfApproverPerSequence ?? rawBody.approvers;
+    let varFundsID = rawBody.FundsID ?? rawBody.fundsID ?? rawBody.FundsId;
+    let varTransactionApprovalVersion = rawBody.ApprovalVersion ?? rawBody.approvalVersion ?? rawBody.varTransactionApprovalVersion;
+
+    console.log("APPROVE JEV RAW PAYLOAD:", rawBody);
+
+    if (!transactionId) {
+      return res.status(400).json({ success: false, message: "Missing Transaction ID." });
+    }
+
+    // 1. Fetch missing data from DB if payload is sparse
+    const transactionRecord = await TransactionTableModel.findByPk(transactionId, { transaction: t });
+    if (!transactionRecord) {
+      await t.rollback();
+      return res.status(404).json({ success: false, message: "Transaction not found." });
+    }
+
+    // Use DB values if payload values are missing
+    varLinkID = varLinkID || transactionRecord.LinkID;
+    varFundsID = varFundsID || transactionRecord.FundsID;
+    varTransactionApprovalVersion = varTransactionApprovalVersion || transactionRecord.ApprovalVersion;
+    // If progress isn't sent, we might be in a simple "Approve All" or first step context.
+    // We'll increment if it's currently 0 or null, or use a sensible default.
+    if (approvalProgress === undefined || approvalProgress === null) {
+      approvalProgress = (transactionRecord.ApprovalProgress || 0) + 1;
+    }
+
+    // Normalized log for debugging
+    console.log("APPROVE JEV NORMALIZED PAYLOAD:", {
+      transactionId,
+      varLinkID,
+      varFundsID,
+      approvalProgress,
+      approvalOrder,
+      numberofApproverperSequence
+    });
+
+    // 2. Generate Invoice Number
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const currentYYMM = `${year}-${month}`;
 
-    console.log("APPROVE JEV PAYLOAD:", req.body); // DEBUG LOG
-
     const currentNumber = await getCurrentNumber(t);
-    const fund = await FundsModel.findByPk(FundsID, { transaction: t });
+    const fund = await FundsModel.findByPk(varFundsID, { transaction: t });
     const fundCode = fund ? fund.Code : '000'; // Fallback code
 
     // Format: FundCode-YYYY-MM-XXXX
     const newInvoiceNumber = `${fundCode}-${currentYYMM}-${currentNumber}`;
 
-    // 2. Determine New Status
+    // 3. Determine New Status
     let newStatus = "Requested";
-    console.log("ApproverPerSequence:", numberofApproverperSequence, "Progress:", approvalProgress); // DEBUG LOG
 
     if (numberofApproverperSequence) {
       if (approvalProgress >= numberofApproverperSequence) newStatus = "Posted";
     } else {
+      // If no sequence logic provided, moving progress forward usually means approval/posting
       if ((approvalProgress || 0) > 0) newStatus = "Posted";
     }
 
-    console.log("New Status:", newStatus); // DEBUG LOG
+    console.log("New Status:", newStatus);
 
     const updatePayload = {
       ApprovalProgress: approvalProgress,
@@ -613,7 +645,7 @@ exports.approveTransaction = async (req, res) => {
       for (const entry of jevEntries) {
         await GeneralLedgerModel.create({
           LinkID: entry.LinkID,
-          FundID: FundsID,
+          FundID: varFundsID,
           FundName: entry.FundsName,
           LedgerItem: entry.LedgerItem,
           AccountName: entry.AccountName,
@@ -629,24 +661,24 @@ exports.approveTransaction = async (req, res) => {
 
     await TransactionTableModel.update(updatePayload, { where: { ID: transactionId }, transaction: t });
 
-    // 3. Update DocumentType current number
+    // 4. Update DocumentType current number
     await DocumentTypeModel.update(
       { CurrentNumber: currentNumber },
       { where: { ID: 23 }, transaction: t }
     );
 
-    // 4. Insert into Approval Audit
+    // 5. Insert into Approval Audit
     await ApprovalAuditModel.create(
       {
-        LinkID: varApprovalLink,
+        LinkID: varApprovalLink || varLinkID, // Use matrix LinkID if available, fallback to Transaction LinkID
         InvoiceLink: varLinkID,
         PositionEmployee: "Employee",
         PositionEmployeeID: req.user.employeeID,
-        SequenceOrder: approvalOrder, // Correctly use the approved sequence order
-        ApprovalOrder: numberofApproverperSequence,
+        SequenceOrder: approvalOrder || 1,
+        ApprovalOrder: numberofApproverperSequence || 1,
         ApprovalDate: now,
         RejectionDate: null,
-        Remarks: null,
+        Remarks: rawBody.Remarks || null,
         CreatedBy: req.user.id,
         CreatedDate: now,
         ApprovalVersion: varTransactionApprovalVersion
@@ -667,11 +699,14 @@ exports.approveTransaction = async (req, res) => {
 exports.rejectTransaction = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
-    const {
-      ID: id,
-      LinkID: varApprovalLink,
-      Reason: reasonForRejection,
-    } = req.body;
+    const rawBody = req.body || {};
+    const id = rawBody.ID ?? rawBody.id;
+    const varApprovalLink = rawBody.LinkID ?? rawBody.linkID ?? rawBody.ApprovalLinkID;
+    const reasonForRejection = rawBody.Reason ?? rawBody.reason ?? rawBody.Remarks ?? rawBody.remarks;
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Missing Transaction ID." });
+    }
 
     // --- UPDATE Transaction Table ---
     await TransactionTableModel.update(
@@ -682,7 +717,7 @@ exports.rejectTransaction = async (req, res) => {
     // --- INSERT INTO Approval Audit ---
     await ApprovalAuditModel.create(
       {
-        LinkID: varApprovalLink, // IMPORTANT: Use LinkID of Approval Matrix, NOT the Transaction LinkID, unless standard is otherwise. Usually matches frontend.
+        LinkID: varApprovalLink,
         RejectionDate: new Date(),
         Remarks: reasonForRejection,
         CreatedBy: req.user.id,

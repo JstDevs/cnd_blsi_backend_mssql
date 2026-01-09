@@ -35,6 +35,7 @@ exports.create = async (req, res) => {
       FiscalYearID,
       ProjectID,
       TravelID,
+      Remarks,
     } = req.body;
 
     let { VendorID,
@@ -97,7 +98,8 @@ exports.create = async (req, res) => {
       ProjectID,
       ApprovalVersion: latestApprovalVersion,
       TravelLink: TravelID,
-      CustomerID: customerID
+      CustomerID: customerID,
+      Remarks
     }, { transaction: t });
 
     for (const item of Items) {
@@ -341,7 +343,8 @@ exports.update = async (req, res) => {
       FiscalYearID,
       ProjectID,
       TravelID,
-      Items
+      Items,
+      Remarks
     } = req.body;
 
     let {
@@ -381,7 +384,8 @@ exports.update = async (req, res) => {
       ProjectID,
       Debit: Total,
       TravelLink: TravelID,
-      CustomerID
+      CustomerID,
+      Remarks
     };
 
     if (!hasMayorAccess) {
@@ -726,10 +730,34 @@ exports.rejectTransaction = async (req, res) => {
     } = req.body;
 
     // --- UPDATE Transaction Table ---
-    await TransactionTable.update(
+    const transaction = await TransactionTable.findByPk(id, { transaction: t });
+    if (!transaction) {
+      throw new Error(`Transaction with ID ${id} not found`);
+    }
+
+    await transaction.update(
       { Status: "Rejected" },
-      { where: { ID: id }, transaction: t }
+      { transaction: t }
     );
+
+    // --- REVERT Budget Pre-Encumbrance ---
+    const fund = await FundsModel.findByPk(transaction.FundsID, { transaction: t });
+    if (fund && fund.Name !== "Trust Fund" && fund.Name !== "Special Education Fund") {
+      const items = await TransactionItems.findAll({
+        where: { LinkID: transaction.LinkID },
+        transaction: t
+      });
+
+      for (const item of items) {
+        const budget = await Budget.findByPk(item.ChargeAccountID, { transaction: t });
+        if (budget) {
+          const amountToRevert = parseFloat(item.AmountDue || item.Sub_Total || 0);
+          const currentPreEnc = parseFloat(budget.PreEncumbrance || 0);
+          const newPreEncumbrance = Math.max(0, currentPreEnc - amountToRevert);
+          await budget.update({ PreEncumbrance: newPreEncumbrance }, { transaction: t });
+        }
+      }
+    }
 
     // --- INSERT INTO Approval Audit ---
     await ApprovalAudit.create(

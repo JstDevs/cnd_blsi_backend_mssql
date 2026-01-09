@@ -226,7 +226,7 @@ app.use('/industrytype', industrytypeRoutes);
 
 app.use('/item', itemRoutes);
 app.use('/itemunit', itemunitRoutes);
-app.use('/journalentryvoucher', journalentryvoucherRoutes);
+app.use('/journalEntryVoucher', journalentryvoucherRoutes);
 app.use('/lgu', lguRoutes);
 app.use('/obligationRequest', obligationRequestRoutes);
 app.use('/disbursementVoucher', disbursementVoucherRoutes);

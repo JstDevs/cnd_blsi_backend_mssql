@@ -963,7 +963,7 @@ exports.approve = async (req, res) => {
         {
           where: {
             InvoiceNumber: trx.ObligationRequestNumber,
-            APAR: { [Op.like]: "%Obligation Request%" }
+            APAR: { [Op.like]: "Obligation Request%" }
           },
           transaction: t
         }

@@ -13,5 +13,7 @@ router.get('/list', requireAuth, controller.list);
 router.delete('/:id', requireAuth, controller.delete);
 router.post('/reject', requireAuth, uploader.any(), controller.rejectTransaction);
 router.post('/approve', requireAuth, uploader.any(), controller.approve);
+router.post('/void', requireAuth, controller.delete);
+router.post('/delete', requireAuth, controller.delete);
 
 module.exports = router;

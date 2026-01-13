@@ -11,6 +11,7 @@ router.get('/budgetList', requireAuth, controller.budgetList);
 router.post('/approve', requireAuth, controller.approveTransaction);
 router.post('/reject', requireAuth, controller.rejectTransaction);
 router.post('/delete', requireAuth, controller.delete);
+router.post('/void', requireAuth, controller.delete);
 router.post('/recover', requireAuth, controller.recover);
 // router.get('/:id', requireAuth, controller.getById);
 // router.put('/:id', requireAuth, controller.update);

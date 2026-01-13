@@ -769,19 +769,26 @@ exports.rejectTransaction = async (req, res) => {
     );
 
     // --- REVERT Budget Pre-Encumbrance ---
-    const fund = await FundsModel.findByPk(transaction.FundsID, { transaction: t });
-    if (true) { // Enabled for all funds
-      const items = await TransactionItems.findAll({
-        where: { LinkID: transaction.LinkID },
-        transaction: t
+    // Optimization: Aggregate updates by ChargeAccountID to reduce network round-trips
+    const items = await TransactionItems.findAll({
+      where: { LinkID: transaction.LinkID },
+      transaction: t
+    });
+
+    if (items.length > 0) {
+      const budgetUpdates = {};
+      items.forEach(item => {
+        const amount = parseFloat(item.AmountDue || item.Sub_Total || 0);
+        if (amount > 0) {
+          budgetUpdates[item.ChargeAccountID] = (budgetUpdates[item.ChargeAccountID] || 0) + amount;
+        }
       });
 
-      for (const item of items) {
-        const budget = await Budget.findByPk(item.ChargeAccountID, { transaction: t });
+      for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
+        const budget = await Budget.findByPk(chargeAccountId, { transaction: t });
         if (budget) {
-          const amountToRevert = parseFloat(item.AmountDue || item.Sub_Total || 0);
           const currentPreEnc = parseFloat(budget.PreEncumbrance || 0);
-          const newPreEncumbrance = Math.max(0, currentPreEnc - amountToRevert);
+          const newPreEncumbrance = Math.max(0, currentPreEnc - totalAmount);
           await budget.update({ PreEncumbrance: newPreEncumbrance }, { transaction: t });
         }
       }
@@ -791,10 +798,12 @@ exports.rejectTransaction = async (req, res) => {
     await ApprovalAudit.create(
       {
         LinkID: varApprovalLink,
+        InvoiceLink: transaction.LinkID,
         RejectionDate: new Date(),
         Remarks: reasonForRejection,
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: new Date(),
+        ApprovalVersion: transaction.ApprovalVersion
       },
       { transaction: t }
     );
@@ -803,7 +812,7 @@ exports.rejectTransaction = async (req, res) => {
     res.json({ success: true, message: "Transaction rejected successfully." });
 
   } catch (err) {
-    await t.rollback();
+    if (t) await t.rollback();
     console.error("Error rejecting transaction:", err);
     res.status(500).json({ success: false, message: err.message });
   }

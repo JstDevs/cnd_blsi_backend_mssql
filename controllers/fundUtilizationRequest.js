@@ -29,7 +29,7 @@ exports.save = async (req, res) => {
   try {
     const parsedFields = {};
 
-    
+
     // Reconstruct Attachments array from fields like Attachments[0].ID starts
     const attachments = [];
     for (const key in req.body) {
@@ -44,8 +44,8 @@ exports.save = async (req, res) => {
     }
     parsedFields.Attachments = attachments;
     // Reconstruct Attachments array from fields like Attachments[0].ID ends
-    
-    
+
+
     for (const key in req.body) {
       try {
         parsedFields[key] = JSON.parse(req.body[key]);
@@ -59,12 +59,12 @@ exports.save = async (req, res) => {
     } = parsedFields;
 
     const data = parsedFields;
-    
+
     let IsNew = '';
-    if((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
+    if ((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
       IsNew = true;
     }
-    else if((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
+    else if ((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
       IsNew = false;
     }
     else {
@@ -72,9 +72,9 @@ exports.save = async (req, res) => {
     }
 
     const refID = (IsNew) ? generateLinkID() : data.LinkID;
-    const latestapprovalversion=await getLatestApprovalVersion('Fund Utilization Request');
+    const latestapprovalversion = await getLatestApprovalVersion('Fund Utilization Request');
 
-    let { 
+    let {
       VendorID,
       CustomerID,
       EmployeeID
@@ -161,10 +161,10 @@ exports.save = async (req, res) => {
           }
         ]
       });
-      if(!account) {
+      if (!account) {
         throw new Error(`Charge Account with ID ${itm.ChargeAccountID} not found`);
       }
-        
+
       let credit = 0;
       let debit = 0;
       if (account.ChartofAccounts?.NormalBalance === 'Debit') {
@@ -222,13 +222,13 @@ exports.save = async (req, res) => {
     });
     const fundName = fund ? fund.Name : 'Unknown Fund';
 
-    
+
     // update budget    
-    if (!["Trust Fund", "Special Education Fund"].includes(fundName)) {
+    if (true) { // Enabled for all funds
       const byChargeAccount = {};
       for (const itm of Items) {
         byChargeAccount[itm.ChargeAccountID] =
-          (byChargeAccount[itm.ChargeAccountID] || 0) + itm.subtotal || 0;
+          (byChargeAccount[itm.ChargeAccountID] || 0) + (itm.subtotal || 0);
       }
 
       for (const [ChargeAccountID, subTotal] of Object.entries(byChargeAccount)) {
@@ -310,8 +310,8 @@ exports.create = async (req, res) => {
 
     const Name = Payee;
 
-    
-    let { 
+
+    let {
       VendorID,
       CustomerID,
       EmployeeID
@@ -384,10 +384,10 @@ exports.create = async (req, res) => {
           }
         ]
       });
-      if(!account) {
+      if (!account) {
         throw new Error(`Charge Account with ID ${itm.ChargeAccountID} not found`);
       }
-        
+
       let credit = 0;
       let debit = 0;
       if (account.ChartofAccounts?.NormalBalance === 'Debit') {
@@ -448,11 +448,11 @@ exports.create = async (req, res) => {
     const fundName = fund ? fund.Name : 'Unknown Fund';
 
     // update budget
-    if (!["Trust Fund", "Special Education Fund"].includes(fundName)) {
+    if (true) { // Enabled for all funds
       const byChargeAccount = {};
       for (const itm of Items) {
         byChargeAccount[itm.ChargeAccountID] =
-          (byChargeAccount[itm.ChargeAccountID] || 0) + itm.subtotal;
+          (byChargeAccount[itm.ChargeAccountID] || 0) + (itm.subtotal || 0);
       }
 
       for (const [ChargeAccountID, subTotal] of Object.entries(byChargeAccount)) {
@@ -468,7 +468,7 @@ exports.create = async (req, res) => {
       }
     }
 
-    
+
     // Insert Attachments
     if (req.files && req.files.length > 0) {
       const blobAttachments = req.files.map(file => ({
@@ -483,7 +483,7 @@ exports.create = async (req, res) => {
     await trx.commit();
 
     const newObligation = await TransactionTableModel.findOne({
-      where: { ID:newRecord.ID },
+      where: { ID: newRecord.ID },
       attributes: {
         include: [
           [literal('`FiscalYear`.`Name`'), 'FiscalYearName'],
@@ -539,7 +539,7 @@ exports.update = async (req, res) => {
       Attachments = []
     } = req.body;
 
-    let { 
+    let {
       VendorID,
       CustomerID,
       EmployeeID
@@ -603,7 +603,7 @@ exports.update = async (req, res) => {
       },
       { transaction: trx }
     );
-    
+
 
 
     // Step 1: Fetch existing for budget reversal
@@ -668,7 +668,7 @@ exports.update = async (req, res) => {
       await AttachmentModel.bulkCreate(newAttachments, { transaction: trx });
     }
 
-    
+
     await trx.commit();
     res.json({ message: "Fund Utilization Request updated successfully" });
   } catch (err) {

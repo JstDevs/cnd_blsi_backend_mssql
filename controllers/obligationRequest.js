@@ -180,15 +180,12 @@ exports.create = async (req, res) => {
     }
 
     // Update Budget PreEncumbrance logic if applicable
-    const fund = await FundsModel.findByPk(FundsID, { transaction: t });
     for (const item of Items) {
-      if (fund?.Name !== 'Trust Fund' && fund?.Name !== 'Special Education Fund') {
-        const budget = await Budget.findByPk(item.ChargeAccountID, { transaction: t });
-        if (budget) {
-          const subtotal = parseFloat(item.Sub_Total || item.subtotal || 0);
-          const newPreEncumbrance = parseFloat(budget.PreEncumbrance || 0) + subtotal;
-          await budget.update({ PreEncumbrance: newPreEncumbrance }, { transaction: t });
-        }
+      const budget = await Budget.findByPk(item.ChargeAccountID, { transaction: t });
+      if (budget) {
+        const subtotal = parseFloat(item.Sub_Total || item.subtotal || 0);
+        const newPreEncumbrance = parseFloat(budget.PreEncumbrance || 0) + subtotal;
+        await budget.update({ PreEncumbrance: newPreEncumbrance }, { transaction: t });
       }
     }
 
@@ -404,7 +401,7 @@ exports.update = async (req, res) => {
     const fund = await FundsModel.findByPk(FundsID, { transaction: t });
     const isBudgetFund = fund?.Name !== 'Trust Fund' && fund?.Name !== 'Special Education Fund';
 
-    if (isBudgetFund) {
+    if (true) { // Enabled for all funds
       for (const oldItem of oldItems) {
         const budget = await Budget.findByPk(oldItem.ChargeAccountID, { transaction: t });
         if (budget) {
@@ -661,7 +658,7 @@ exports.approveTransaction = async (req, res) => {
       }
 
       // Skip Trust Fund and Special Education Fund
-      if (fund.Name !== "Trust Fund" && fund.Name !== "Special Education Fund") {
+      if (true) { // Enabled for all funds
         // aggregate SubTotal per ChargeAccountID
         const chargeAccountSums = {};
 
@@ -773,7 +770,7 @@ exports.rejectTransaction = async (req, res) => {
 
     // --- REVERT Budget Pre-Encumbrance ---
     const fund = await FundsModel.findByPk(transaction.FundsID, { transaction: t });
-    if (fund && fund.Name !== "Trust Fund" && fund.Name !== "Special Education Fund") {
+    if (true) { // Enabled for all funds
       const items = await TransactionItems.findAll({
         where: { LinkID: transaction.LinkID },
         transaction: t

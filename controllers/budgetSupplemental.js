@@ -352,9 +352,9 @@ exports.approveTransaction = async (req, res) => {
     } else if (action === "Approve") {
       // Determine new status based on approval progress and expected approvers
       if (numberOfApproverPerSequence) {
-        if (approvalProgress >= numberOfApproverPerSequence) newStatus = 'Approved';
+        if (approvalProgress >= numberOfApproverPerSequence) newStatus = 'Posted';
       } else {
-        if ((approvalProgress || 0) > 0) newStatus = 'Approved';
+        if ((approvalProgress || 0) > 0) newStatus = 'Posted';
       }
 
       await TransactionTableModel.update(
@@ -382,8 +382,8 @@ exports.approveTransaction = async (req, res) => {
       { transaction: t }
     );
 
-    // Update Budget table: ONLY if fully approved
-    if (newStatus === 'Approved' && varBudgetID) {
+    // Update Budget table: ONLY if fully posted
+    if (newStatus === 'Posted' && varBudgetID) {
       const transaction = await TransactionTableModel.findByPk(id, { transaction: t });
       const supplementalAmount = parseFloat(transaction?.Total || 0);
 

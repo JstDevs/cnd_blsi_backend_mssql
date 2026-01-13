@@ -238,9 +238,9 @@ exports.approve = async (req, res) => {
 
   const t = await db.sequelize.transaction();
   try {
-    // --- 1. Update Transaction Table to Approved ---
+    // --- 1. Update Transaction Table to Posted ---
     await TransactionTableModel.update(
-      { Status: 'Approved', ApprovalProgress: 100 },
+      { Status: 'Posted', ApprovalProgress: 100 },
       { where: { ID: id }, transaction: t }
     );
 

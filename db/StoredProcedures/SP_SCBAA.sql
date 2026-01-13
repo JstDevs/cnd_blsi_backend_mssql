@@ -1,12 +1,12 @@
 DELIMITER $$
 
-CREATE PROCEDURE SP_SCBAA (
+ALTER PROCEDURE SP_SCBAA (
   IN fiscalYear VARCHAR(50)
 )
 BEGIN
   SELECT
     act.Name AS Type,
-    acs.ID AS SubID,
+    acs.ID AS SubIDx,
     acs.Name AS Subtype,
     acc.Name AS Category,
     coa.Name AS ChartOfAccounts,
@@ -32,14 +32,14 @@ BEGIN
     lpr.Name AS Province
 
   FROM budget AS bud
-    INNER JOIN chartofaccounts AS coa ON coa.ID = bud.ChartOfAccountsID
-    INNER JOIN accounttype AS act ON act.ID = coa.AccountTypeID
-    INNER JOIN accountsubtype AS acs ON acs.ID = coa.AccountSubTypeID
-    INNER JOIN accountcategory AS acc ON acc.ID = coa.AccountCategoryID
-    INNER JOIN fiscalyear AS fsy ON fsy.ID = bud.FiscalYearID
-    INNER JOIN lgu AS lgu ON lgu.ID = 1
-    INNER JOIN municipality AS lmu ON lmu.ID = lgu.MunicipalityID
-    INNER JOIN province AS lpr ON lpr.ID = lgu.ProvinceID
+    INNER JOIN chartofaccounts  AS coa ON coa.ID = bud.ChartOfAccountsID
+    INNER JOIN accounttype      AS act ON act.ID = coa.AccountTypeID
+    INNER JOIN accountsubtype   AS acs ON acs.ID = coa.AccountSubTypeID
+    INNER JOIN accountcategory  AS acc ON acc.ID = coa.AccountCategoryID
+    INNER JOIN fiscalyear       AS fsy ON fsy.ID = bud.FiscalYearID
+    INNER JOIN lgu              AS lgu ON lgu.ID = 1
+    INNER JOIN municipality     AS lmu ON lmu.ID = lgu.MunicipalityID
+    INNER JOIN province         AS lpr ON lpr.ID = lgu.ProvinceID
 
   WHERE bud.FiscalYearID = fiscalYear
 

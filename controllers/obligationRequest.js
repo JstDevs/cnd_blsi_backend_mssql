@@ -533,10 +533,54 @@ exports.update = async (req, res) => {
 };
 
 exports.delete = async (req, res) => {
+  const t = await db.sequelize.transaction();
   try {
-    // empty function in old software
-    throw new Error('Delete operation is not implemented for Obligation Requests');
+    const { id } = req.params;
+
+    const transaction = await TransactionTable.findByPk(id, { transaction: t });
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    if (transaction.Status === 'Posted') {
+      throw new Error('Cannot delete a Posted Obligation Request. Please reject or reverse it instead.');
+    }
+
+    // --- REVERT Budget Pre-Encumbrance ---
+    const items = await TransactionItems.findAll({
+      where: { LinkID: transaction.LinkID },
+      transaction: t
+    });
+
+    if (items.length > 0) {
+      const budgetUpdates = {};
+      items.forEach(item => {
+        const amount = parseFloat(item.AmountDue || item.Sub_Total || 0);
+        if (amount > 0) {
+          budgetUpdates[item.ChargeAccountID] = (budgetUpdates[item.ChargeAccountID] || 0) + amount;
+        }
+      });
+
+      for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
+        const budget = await Budget.findByPk(chargeAccountId, { transaction: t });
+        if (budget) {
+          const currentPreEnc = parseFloat(budget.PreEncumbrance || 0);
+          const newPreEncumbrance = Math.max(0, currentPreEnc - totalAmount);
+          await budget.update({ PreEncumbrance: newPreEncumbrance }, { transaction: t });
+        }
+      }
+    }
+
+    // --- Soft Delete Transaction and Items ---
+    await transaction.update({ Active: false, ModifyBy: req.user.id, ModifyDate: new Date() }, { transaction: t });
+    await TransactionItems.update({ Active: false }, { where: { LinkID: transaction.LinkID }, transaction: t });
+
+    await t.commit();
+    res.json({ success: true, message: "Transaction deleted successfully." });
+
   } catch (err) {
+    if (t) await t.rollback();
+    console.error("Error deleting transaction:", err);
     res.status(500).json({ error: err.message });
   }
 };

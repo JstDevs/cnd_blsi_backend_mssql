@@ -93,7 +93,8 @@ var _Users = require("./Users");
 var _Vendor = require("./vendor");
 var _VendorCustomerType = require("./vendorCustomerType");
 var _VendorType = require("./vendorType");
-var _UserUserAccess=require("./Useruseraccess");
+var _BusinessPermit = require("./businessPermit");
+var _UserUserAccess = require("./Useruseraccess");
 const chartofAccounts = require("./chartofAccounts");
 
 function initModels(sequelize) {
@@ -191,18 +192,19 @@ function initModels(sequelize) {
   var vendor = _Vendor(sequelize, DataTypes);
   var vendorCustomerType = _VendorCustomerType(sequelize, DataTypes);
   var vendorType = _VendorType(sequelize, DataTypes);
-  var UserUserAccess=_UserUserAccess(sequelize, DataTypes);
+  var BusinessPermit = _BusinessPermit(sequelize, DataTypes);
+  var UserUserAccess = _UserUserAccess(sequelize, DataTypes);
 
-  BudgetChange.belongsTo(BudgetType, { as: "BudgetType", foreignKey: "BudgetTypeID"});
-  BudgetType.hasMany(BudgetChange, { as: "BudgetChanges", foreignKey: "BudgetTypeID"});
-  Apar.belongsTo(Customer, { as: "Customer", foreignKey: "CustomerID"});
-  Customer.hasMany(Apar, { as: "APARs", foreignKey: "CustomerID"});
-  PropertyCoOwners.belongsTo(Customer, { as: "CoOwner", foreignKey: "CoOwnerID"});
-  Customer.hasMany(PropertyCoOwners, { as: "PropertyCoOwners", foreignKey: "CoOwnerID"});
-  employee.belongsTo(department, { as: "Department", foreignKey: "DepartmentID"});
-  department.hasMany(employee, { as: "Employees", foreignKey: "DepartmentID"});
-  ApprovalMatrix.belongsTo(documentType, { as: "DocumentType", foreignKey: "DocumentTypeID"});
-  documentType.hasMany(ApprovalMatrix, { as: "ApprovalMatrices", foreignKey: "DocumentTypeID"});
+  BudgetChange.belongsTo(BudgetType, { as: "BudgetType", foreignKey: "BudgetTypeID" });
+  BudgetType.hasMany(BudgetChange, { as: "BudgetChanges", foreignKey: "BudgetTypeID" });
+  Apar.belongsTo(Customer, { as: "Customer", foreignKey: "CustomerID" });
+  Customer.hasMany(Apar, { as: "APARs", foreignKey: "CustomerID" });
+  PropertyCoOwners.belongsTo(Customer, { as: "CoOwner", foreignKey: "CoOwnerID" });
+  Customer.hasMany(PropertyCoOwners, { as: "PropertyCoOwners", foreignKey: "CoOwnerID" });
+  employee.belongsTo(department, { as: "Department", foreignKey: "DepartmentID" });
+  department.hasMany(employee, { as: "Employees", foreignKey: "DepartmentID" });
+  ApprovalMatrix.belongsTo(documentType, { as: "DocumentType", foreignKey: "DocumentTypeID" });
+  documentType.hasMany(ApprovalMatrix, { as: "ApprovalMatrices", foreignKey: "DocumentTypeID" });
 
   // newly added starts
   ApprovalMatrix.hasMany(Approvers, { foreignKey: 'LinkID', sourceKey: 'ID' });
@@ -220,7 +222,7 @@ function initModels(sequelize) {
   TravelDocuments.belongsTo(TravelOrder, { foreignKey: 'LinkID', targetKey: 'LinkID' });
   Attachment.belongsTo(TravelOrder, { foreignKey: 'LinkID', targetKey: 'LinkID' });
   TransactionTable.belongsTo(TravelOrder, { foreignKey: 'LinkID', targetKey: 'LinkID' });
-  TravelOrder.belongsTo(department, { as: "BudgetDepartment", foreignKey: "BudgetID"});
+  TravelOrder.belongsTo(department, { as: "BudgetDepartment", foreignKey: "BudgetID" });
 
   TransactionTable.hasMany(JournalEntryVoucher, { foreignKey: 'LinkID', sourceKey: 'LinkID', as: 'JournalEntries' });
   TransactionTable.hasMany(Attachment, { foreignKey: 'LinkID', sourceKey: 'LinkID', as: 'Attachments' });
@@ -229,7 +231,7 @@ function initModels(sequelize) {
 
   TransactionTable.belongsTo(employee, { foreignKey: 'RequestedBy', targetKey: 'ID', as: 'RequestedByEmployee' });
   TransactionTable.belongsTo(Funds, { foreignKey: 'FundsID', targetKey: 'ID', as: 'Funds' });
-  
+
   TransactionTable.belongsTo(FiscalYear, { foreignKey: 'FiscalYearID', as: 'FiscalYear' });
   TransactionTable.belongsTo(Project, { foreignKey: 'ProjectID', as: 'Project' });
   TransactionTable.belongsTo(department, { foreignKey: 'ResponsibilityCenter', as: 'Department' });
@@ -244,7 +246,7 @@ function initModels(sequelize) {
   TransactionTable.hasMany(TransactionItems, { foreignKey: "LinkID", sourceKey: "LinkID", as: "TransactionItemsAll" });
   TransactionItems.belongsTo(TransactionTable, { foreignKey: "LinkID", targetKey: "LinkID", as: "TransactionTable" });
 
-  TransactionTable.belongsTo(vendor, { as: "Vendor", foreignKey: "VendorID"});
+  TransactionTable.belongsTo(vendor, { as: "Vendor", foreignKey: "VendorID" });
 
   TransactionItems.belongsTo(Budget, { as: "ChargeAccount", foreignKey: "ChargeAccountID" });
 
@@ -280,40 +282,40 @@ function initModels(sequelize) {
 
   // newly added ends
 
-  documentType.belongsTo(documentTypeCategory, { as: "DocumentTypeCategory", foreignKey: "DocumentTypeCategoryID"});
-  documentTypeCategory.hasMany(documentType, { as: "DocumentTypes", foreignKey: "DocumentTypeCategoryID"});
+  documentType.belongsTo(documentTypeCategory, { as: "DocumentTypeCategory", foreignKey: "DocumentTypeCategoryID" });
+  documentTypeCategory.hasMany(documentType, { as: "DocumentTypes", foreignKey: "DocumentTypeCategoryID" });
 
-  employee.belongsTo(employmentStatus, { as: "EmploymentStatus", foreignKey: "EmploymentStatusID"});
-  employmentStatus.hasMany(employee, { as: "Employees", foreignKey: "EmploymentStatusID"});
-  Customer.belongsTo(industryType, { as: "IndustryType", foreignKey: "IndustryTypeID"});
-  industryType.hasMany(Customer, { as: "Customers", foreignKey: "IndustryTypeID"});
-  
-  industryType.hasMany(vendor, { as: "Vendors", foreignKey: "IndustryTypeID"});
-  employee.belongsTo(nationality, { as: "Nationality", foreignKey: "NationalityID"});
-  nationality.hasMany(employee, { as: "Employees", foreignKey: "NationalityID"});
-  Customer.belongsTo(paymentMethod, { as: "PaymentMethod", foreignKey: "PaymentMethodID"});
-  paymentMethod.hasMany(Customer, { as: "Customers", foreignKey: "PaymentMethodID"});
- 
-  paymentMethod.hasMany(vendor, { as: "Vendors", foreignKey: "PaymentMethodID"});
-  employee.belongsTo(position, { as: "Position", foreignKey: "PositionID"});
-  employee.belongsTo(barangay, { as: "Barangay", foreignKey: "BarangayID"});
-  barangay.hasMany(employee, { as: "Employees", foreignKey: "BarangayID"});
-  employee.belongsTo(municipality, { as: "Municipality", foreignKey: "MunicipalityID"});
-  municipality.hasMany(employee, { as: "Employees", foreignKey: "MunicipalityID"});
-  employee.belongsTo(province, { as: "Province", foreignKey: "ProvinceID"});
-  province.hasMany(employee, { as: "Employees", foreignKey: "ProvinceID"});
-  employee.belongsTo(region, { as: "Region", foreignKey: "RegionID"});
-  region.hasMany(employee, { as: "Employees", foreignKey: "RegionID"});
-  bank.belongsTo(currency, { as: "Currency", foreignKey: "CurrencyID"});
-  position.hasMany(employee, { as: "Employees", foreignKey: "PositionID"});
-  Property.belongsTo(Property, { as: "ID_Property", foreignKey: "ID"});
+  employee.belongsTo(employmentStatus, { as: "EmploymentStatus", foreignKey: "EmploymentStatusID" });
+  employmentStatus.hasMany(employee, { as: "Employees", foreignKey: "EmploymentStatusID" });
+  Customer.belongsTo(industryType, { as: "IndustryType", foreignKey: "IndustryTypeID" });
+  industryType.hasMany(Customer, { as: "Customers", foreignKey: "IndustryTypeID" });
+
+  industryType.hasMany(vendor, { as: "Vendors", foreignKey: "IndustryTypeID" });
+  employee.belongsTo(nationality, { as: "Nationality", foreignKey: "NationalityID" });
+  nationality.hasMany(employee, { as: "Employees", foreignKey: "NationalityID" });
+  Customer.belongsTo(paymentMethod, { as: "PaymentMethod", foreignKey: "PaymentMethodID" });
+  paymentMethod.hasMany(Customer, { as: "Customers", foreignKey: "PaymentMethodID" });
+
+  paymentMethod.hasMany(vendor, { as: "Vendors", foreignKey: "PaymentMethodID" });
+  employee.belongsTo(position, { as: "Position", foreignKey: "PositionID" });
+  employee.belongsTo(barangay, { as: "Barangay", foreignKey: "BarangayID" });
+  barangay.hasMany(employee, { as: "Employees", foreignKey: "BarangayID" });
+  employee.belongsTo(municipality, { as: "Municipality", foreignKey: "MunicipalityID" });
+  municipality.hasMany(employee, { as: "Employees", foreignKey: "MunicipalityID" });
+  employee.belongsTo(province, { as: "Province", foreignKey: "ProvinceID" });
+  province.hasMany(employee, { as: "Employees", foreignKey: "ProvinceID" });
+  employee.belongsTo(region, { as: "Region", foreignKey: "RegionID" });
+  region.hasMany(employee, { as: "Employees", foreignKey: "RegionID" });
+  bank.belongsTo(currency, { as: "Currency", foreignKey: "CurrencyID" });
+  position.hasMany(employee, { as: "Employees", foreignKey: "PositionID" });
+  Property.belongsTo(Property, { as: "ID_Property", foreignKey: "ID" });
   // Property.hasOne(Property, { as: "Property", foreignKey: "ID"});
-  Apar.belongsTo(vendor, { as: "Vendor", foreignKey: "VendorID"});
-  
-  vendorType.hasMany(vendor, { as: "Vendors", foreignKey: "TypeID"});
+  Apar.belongsTo(vendor, { as: "Vendor", foreignKey: "VendorID" });
+
+  vendorType.hasMany(vendor, { as: "Vendors", foreignKey: "TypeID" });
   // subDepartment.belongsTo(department, { as: "Department", foreignKey: "DepartmentID"});
-  userAccess.hasMany(ModuleAccess, { as: "ModuleAccesses", foreignKey: "UserAccessID"});
-  ModuleAccess.belongsTo(Module, { as: "Module", foreignKey: "ModuleID"});
+  userAccess.hasMany(ModuleAccess, { as: "ModuleAccesses", foreignKey: "UserAccessID" });
+  ModuleAccess.belongsTo(Module, { as: "Module", foreignKey: "ModuleID" });
   userAccess.belongsToMany(users, {
     through: UserUserAccess,
     foreignKey: 'UserAccessID',
@@ -321,126 +323,126 @@ function initModels(sequelize) {
     as: 'users'
   });
   users.belongsToMany(
-      userAccess, {
-        through: UserUserAccess,
-        foreignKey: 'UserID',
-        otherKey: 'UserAccessID',
-        as: 'accessList'
-      });
-  users.belongsTo(employee, { as: "Employee", foreignKey: "EmployeeID"});
+    userAccess, {
+    through: UserUserAccess,
+    foreignKey: 'UserID',
+    otherKey: 'UserAccessID',
+    as: 'accessList'
+  });
+  users.belongsTo(employee, { as: "Employee", foreignKey: "EmployeeID" });
   // AccountSubType.belongsTo(accountType, { as: "AccountType", foreignKey: "AccountTypeID"});
-  Item.belongsTo(itemUnit, { as: "ItemUnit", foreignKey: "UnitID"});
-  Item.belongsTo(taxCode, { as: "TaxCode", foreignKey: "TAXCodeID"});
-  Item.belongsTo(bank, { as: "ChargeAccount", foreignKey: "ChargeAccountID"});
-  ServiceInvoiceAccounts.belongsTo(ChartofAccounts, { as: "Account", foreignKey: "ChartofAccountsID"});
-  Project.belongsTo(ProjectType, { as: "ProjectType", foreignKey: "ProjectTypeID"});
+  Item.belongsTo(itemUnit, { as: "ItemUnit", foreignKey: "UnitID" });
+  Item.belongsTo(taxCode, { as: "TaxCode", foreignKey: "TAXCodeID" });
+  Item.belongsTo(bank, { as: "ChargeAccount", foreignKey: "ChargeAccountID" });
+  ServiceInvoiceAccounts.belongsTo(ChartofAccounts, { as: "Account", foreignKey: "ChartofAccountsID" });
+  Project.belongsTo(ProjectType, { as: "ProjectType", foreignKey: "ProjectTypeID" });
 
-  Customer.belongsTo(region, { as: "region", foreignKey: "RegionID"});
-  Customer.belongsTo(province, { as: "province", foreignKey: "ProvinceID"});
-  Customer.belongsTo(municipality, { as: "municipality", foreignKey: "MunicipalityID"});
-  Customer.belongsTo(barangay, { as: "barangay", foreignKey: "BarangayID"});
-  Customer.belongsTo(paymentTerms, { as: "paymentTerms", foreignKey: "PaymentTermsID"});
-  Customer.belongsTo(paymentMethod, { as: "paymentMethod", foreignKey: "PaymentMethodID"});
-  Customer.belongsTo(taxCode, { as: "taxCode", foreignKey: "TaxCodeID"});
-  Customer.belongsTo(industryType, { as: "industryType", foreignKey: "IndustryTypeID"});
+  Customer.belongsTo(region, { as: "region", foreignKey: "RegionID" });
+  Customer.belongsTo(province, { as: "province", foreignKey: "ProvinceID" });
+  Customer.belongsTo(municipality, { as: "municipality", foreignKey: "MunicipalityID" });
+  Customer.belongsTo(barangay, { as: "barangay", foreignKey: "BarangayID" });
+  Customer.belongsTo(paymentTerms, { as: "paymentTerms", foreignKey: "PaymentTermsID" });
+  Customer.belongsTo(paymentMethod, { as: "paymentMethod", foreignKey: "PaymentMethodID" });
+  Customer.belongsTo(taxCode, { as: "taxCode", foreignKey: "TaxCodeID" });
+  Customer.belongsTo(industryType, { as: "industryType", foreignKey: "IndustryTypeID" });
 
-  ChartofAccounts.belongsTo(accountType, { as: "AccountType", foreignKey: "AccountTypeID"});
-  ChartofAccounts.belongsTo(AccountSubType, { as: "AccountSubType", foreignKey: "AccountSubTypeID"});
-  ChartofAccounts.belongsTo(AccountCategory, { as: "AccountCategory", foreignKey: "AccountCategoryID"});
-  
-  AccountSubType.belongsTo(accountType, { as: "AccountType", foreignKey: "AccountTypeID"});
-  AccountCategory.belongsTo(AccountSubType, { as: "AccountSubType", foreignKey: "AccountSubTypeID"});
+  ChartofAccounts.belongsTo(accountType, { as: "AccountType", foreignKey: "AccountTypeID" });
+  ChartofAccounts.belongsTo(AccountSubType, { as: "AccountSubType", foreignKey: "AccountSubTypeID" });
+  ChartofAccounts.belongsTo(AccountCategory, { as: "AccountCategory", foreignKey: "AccountCategoryID" });
+
+  AccountSubType.belongsTo(accountType, { as: "AccountType", foreignKey: "AccountTypeID" });
+  AccountCategory.belongsTo(AccountSubType, { as: "AccountSubType", foreignKey: "AccountSubTypeID" });
 
 
-  vendor.belongsTo(industryType, { as: "IndustryType", foreignKey: "IndustryTypeID"});
-  vendor.belongsTo(paymentMethod, { as: "PaymentMethod", foreignKey: "PaymentMethodID"});
-  vendor.hasMany(Apar, { as: "APARs", foreignKey: "VendorID"});
-  vendor.belongsTo(vendorType, { as: "Type", foreignKey: "TypeID"});
-  vendor.belongsTo(region, { as: "Region", foreignKey: "RegionID"});
-  vendor.belongsTo(province, { as: "Province", foreignKey: "ProvinceID"});
-  vendor.belongsTo(municipality, { as: "Municipality", foreignKey: "MunicipalityID"});
-  vendor.belongsTo(barangay, { as: "Barangay", foreignKey: "BarangayID"});
-  vendor.belongsTo(paymentTerms, { as: "PaymentTerms", foreignKey: "PaymentTermsID"});
-  vendor.belongsTo(taxCode, { as: "TaxCode", foreignKey: "TaxCodeID"});
+  vendor.belongsTo(industryType, { as: "IndustryType", foreignKey: "IndustryTypeID" });
+  vendor.belongsTo(paymentMethod, { as: "PaymentMethod", foreignKey: "PaymentMethodID" });
+  vendor.hasMany(Apar, { as: "APARs", foreignKey: "VendorID" });
+  vendor.belongsTo(vendorType, { as: "Type", foreignKey: "TypeID" });
+  vendor.belongsTo(region, { as: "Region", foreignKey: "RegionID" });
+  vendor.belongsTo(province, { as: "Province", foreignKey: "ProvinceID" });
+  vendor.belongsTo(municipality, { as: "Municipality", foreignKey: "MunicipalityID" });
+  vendor.belongsTo(barangay, { as: "Barangay", foreignKey: "BarangayID" });
+  vendor.belongsTo(paymentTerms, { as: "PaymentTerms", foreignKey: "PaymentTermsID" });
+  vendor.belongsTo(taxCode, { as: "TaxCode", foreignKey: "TaxCodeID" });
   // vendor.belongsTo(bank, { as: "Bank", foreignKey: "BankID"});
   // vendor.belongsTo(currency, { as: "Currency", foreignKey: "CurrencyID"});
- 
-  ppe.belongsTo(ppeCategory, { as: "Category", foreignKey: "CategoryID"});
-  ppe.belongsTo(ppeSupplier, { as: "Supplier", foreignKey: "SupplierID"});
+
+  ppe.belongsTo(ppeCategory, { as: "Category", foreignKey: "CategoryID" });
+  ppe.belongsTo(ppeSupplier, { as: "Supplier", foreignKey: "SupplierID" });
 
 
-  TravelOrder.belongsTo(department, { as: "Department", foreignKey: "DepartmentID"});
-  TravelOrder.belongsTo(position, { as: "Position", foreignKey: "PositionID"});
+  TravelOrder.belongsTo(department, { as: "Department", foreignKey: "DepartmentID" });
+  TravelOrder.belongsTo(position, { as: "Position", foreignKey: "PositionID" });
 
 
-  BeginningBalance.belongsTo(Funds, { as: "Funds", foreignKey: "FundsID"});
-  BeginningBalance.belongsTo(FiscalYear, { as: "FiscalYear", foreignKey: "FiscalYearID"});
+  BeginningBalance.belongsTo(Funds, { as: "Funds", foreignKey: "FundsID" });
+  BeginningBalance.belongsTo(FiscalYear, { as: "FiscalYear", foreignKey: "FiscalYearID" });
 
-  Budget.belongsTo(FiscalYear, { as: "FiscalYear", foreignKey: "FiscalYearID"});
-  Budget.belongsTo(department, { as: "Department", foreignKey: "DepartmentID"});
-  Budget.belongsTo(subDepartment, { as: "SubDepartment", foreignKey: "SubDepartmentID"});
-  Budget.belongsTo(Funds, { as: "Funds", foreignKey: "FundID"});
-  Budget.belongsTo(ChartofAccounts, { as: "ChartofAccounts", foreignKey: "ChartofAccountsID"});
-  ChartofAccounts.hasMany(Budget, { as: "Budget", foreignKey: "ChartofAccountsID"});
-  Budget.belongsTo(Project, { as: "Project", foreignKey: "ProjectID"});
-  Budget.belongsTo(Lgu,{ as: "Lgu", foreignKey: "ProjectID"});
-  Budget.belongsTo(employee,{as:"Employee", foreignKey:"CreatedBy"});
+  Budget.belongsTo(FiscalYear, { as: "FiscalYear", foreignKey: "FiscalYearID" });
+  Budget.belongsTo(department, { as: "Department", foreignKey: "DepartmentID" });
+  Budget.belongsTo(subDepartment, { as: "SubDepartment", foreignKey: "SubDepartmentID" });
+  Budget.belongsTo(Funds, { as: "Funds", foreignKey: "FundID" });
+  Budget.belongsTo(ChartofAccounts, { as: "ChartofAccounts", foreignKey: "ChartofAccountsID" });
+  ChartofAccounts.hasMany(Budget, { as: "Budget", foreignKey: "ChartofAccountsID" });
+  Budget.belongsTo(Project, { as: "Project", foreignKey: "ProjectID" });
+  Budget.belongsTo(Lgu, { as: "Lgu", foreignKey: "ProjectID" });
+  Budget.belongsTo(employee, { as: "Employee", foreignKey: "CreatedBy" });
 
-  TransactionTable.belongsTo(Budget, { as: "Budget", foreignKey: "BudgetID"});
-  TransactionTable.belongsTo(Budget, { as: "Target", foreignKey: "TargetID"});
-  TransactionTable.belongsTo(Funds, { as: "sourceFunds", foreignKey: "FundsID"});
-  TransactionTable.belongsTo(Funds, { as: "targetFunds", foreignKey: "TargetID"});
-  TransactionTable.belongsTo(Customer, { as: "Customer", foreignKey: "CustomerID"});
-  TransactionTable.belongsTo(employee, { as: "Employee", foreignKey: "EmployeeID"});
-  TransactionTable.belongsTo(documentType, { as: "DocumentType", foreignKey: "DocumentTypeID"});
-  TransactionTable.belongsTo(employee, { as: "CreatedByUSER", foreignKey: "CreatedBy"});
-  TransactionTable.belongsTo(TransactionItems, { as: "TransactionItems", foreignKey: "LinkID"});
+  TransactionTable.belongsTo(Budget, { as: "Budget", foreignKey: "BudgetID" });
+  TransactionTable.belongsTo(Budget, { as: "Target", foreignKey: "TargetID" });
+  TransactionTable.belongsTo(Funds, { as: "sourceFunds", foreignKey: "FundsID" });
+  TransactionTable.belongsTo(Funds, { as: "targetFunds", foreignKey: "TargetID" });
+  TransactionTable.belongsTo(Customer, { as: "Customer", foreignKey: "CustomerID" });
+  TransactionTable.belongsTo(employee, { as: "Employee", foreignKey: "EmployeeID" });
+  TransactionTable.belongsTo(documentType, { as: "DocumentType", foreignKey: "DocumentTypeID" });
+  TransactionTable.belongsTo(employee, { as: "CreatedByUSER", foreignKey: "CreatedBy" });
+  TransactionTable.belongsTo(TransactionItems, { as: "TransactionItems", foreignKey: "LinkID" });
 
   TransactionTable.hasMany(GeneralLedger, {
-  as: 'GeneralLedger',
-  foreignKey: 'LinkID',
-  sourceKey: 'LinkID'
-});
- TransactionTable.hasMany(ApprovalAudit, {
-  as: 'ApprovalAudit',
-  foreignKey: 'LinkID',
-  sourceKey: 'LinkID'
-});
+    as: 'GeneralLedger',
+    foreignKey: 'LinkID',
+    sourceKey: 'LinkID'
+  });
+  TransactionTable.hasMany(ApprovalAudit, {
+    as: 'ApprovalAudit',
+    foreignKey: 'LinkID',
+    sourceKey: 'LinkID'
+  });
   // TransactionTable.belongsTo(GeneralLedger, { as: "GeneralLedger", foreignKey: "LinkID"});
   // TransactionTable.belongsTo(ApprovalAudit, { as: "ApprovalAudit", foreignKey: "LinkID"});
-  TransactionTable.belongsTo(Lgu, { as: "Lgu", foreignKey: "ID"});
-  TransactionItems.belongsTo(Item,{as:"Item",foreignKey:"ItemID"})
-  SubFunds.belongsTo(Funds, { as: "Funds", foreignKey: "FundsID"});
-  Funds.hasMany(SubFunds, { as: "SubFunds", foreignKey: "FundsID"});
-  ApprovalAudit.belongsTo(employee, { as: "Employee", foreignKey: "PositionorEmployeeID"});
+  TransactionTable.belongsTo(Lgu, { as: "Lgu", foreignKey: "ID" });
+  TransactionItems.belongsTo(Item, { as: "Item", foreignKey: "ItemID" })
+  SubFunds.belongsTo(Funds, { as: "Funds", foreignKey: "FundsID" });
+  Funds.hasMany(SubFunds, { as: "SubFunds", foreignKey: "FundsID" });
+  ApprovalAudit.belongsTo(employee, { as: "Employee", foreignKey: "PositionorEmployeeID" });
 
-MarriageRecord.belongsTo(TransactionTable, {
-  as: "TransactionTable",
-  targetKey: "LinkID",
-  foreignKey: "LinkID"
-});  // Funds.belongsTo(FiscalYear, { as: "FiscalYear", foreignKey: "FiscalYearID"});
-BurialRecord.belongsTo(TransactionTable, {
-  as: "TransactionTable",
-  targetKey: "LinkID",
-  foreignKey: "LinkID"
-});
+  MarriageRecord.belongsTo(TransactionTable, {
+    as: "TransactionTable",
+    targetKey: "LinkID",
+    foreignKey: "LinkID"
+  });  // Funds.belongsTo(FiscalYear, { as: "FiscalYear", foreignKey: "FiscalYearID"});
+  BurialRecord.belongsTo(TransactionTable, {
+    as: "TransactionTable",
+    targetKey: "LinkID",
+    foreignKey: "LinkID"
+  });
 
-Check.belongsTo(bank, { as: "Bank", foreignKey: "BankID"});
-Check.belongsTo(employee, { as: "SignatoryOne", foreignKey: "SignatoryOneID"});
-Check.belongsTo(employee, { as: "SignatoryTwo", foreignKey: "SignatoryTwoID"});
+  Check.belongsTo(bank, { as: "Bank", foreignKey: "BankID" });
+  Check.belongsTo(employee, { as: "SignatoryOne", foreignKey: "SignatoryOneID" });
+  Check.belongsTo(employee, { as: "SignatoryTwo", foreignKey: "SignatoryTwoID" });
 
-Lgu.belongsTo(municipality, { as: "Municipality", foreignKey: "MunicipalityID"});
-Lgu.belongsTo(barangay, { as: "Barangay", foreignKey: "BarangayID"});
-Lgu.belongsTo(province, { as: "Province", foreignKey: "ProvinceID"});
-Lgu.belongsTo(region, { as: "Region", foreignKey: "RegionID"});
-GeneralLedger.belongsTo(ChartofAccounts, {
-  as: "ChartofAccounts",
-  targetKey: "AccountCode",
-  foreignKey: "AccountCode"
-});
+  Lgu.belongsTo(municipality, { as: "Municipality", foreignKey: "MunicipalityID" });
+  Lgu.belongsTo(barangay, { as: "Barangay", foreignKey: "BarangayID" });
+  Lgu.belongsTo(province, { as: "Province", foreignKey: "ProvinceID" });
+  Lgu.belongsTo(region, { as: "Region", foreignKey: "RegionID" });
+  GeneralLedger.belongsTo(ChartofAccounts, {
+    as: "ChartofAccounts",
+    targetKey: "AccountCode",
+    foreignKey: "AccountCode"
+  });
 
 
-const models=[ Apar,
+  const models = [Apar,
     AccountCategory,
     AccountSubType,
     accountType,
@@ -534,10 +536,11 @@ const models=[ Apar,
     vendor,
     vendorCustomerType,
     vendorType,
-    UserUserAccess
-]
+    UserUserAccess,
+    BusinessPermit
+  ]
 
-for (const modelName in models) {
+  for (const modelName in models) {
     if (models[modelName].options) {
       models[modelName].options.freezeTableName = true;
     }
@@ -637,7 +640,8 @@ for (const modelName in models) {
     vendor,
     vendorCustomerType,
     vendorType,
-    UserUserAccess
+    UserUserAccess,
+    BusinessPermit
   };
 }
 module.exports = initModels;

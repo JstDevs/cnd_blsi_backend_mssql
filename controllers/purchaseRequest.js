@@ -345,14 +345,41 @@ exports.getById = async (req, res) => {
 
 
 exports.delete = async (req, res) => {
+  const t = await db.sequelize.transaction();
   try {
     const { id } = req.params;
-    const transaction = await TransactionTableModel.findByPk(id);
-    if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
+    const userID = req.user?.id ?? 1;
 
-    await transaction.update({ Active: 0 });
-    res.json({ message: 'Deleted successfully' });
+    const transaction = await TransactionTableModel.findByPk(id, { transaction: t });
+    if (!transaction) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // --- VOID Transaction ---
+    await transaction.update({
+      Status: 'Void',
+      Active: true,
+      ModifyBy: userID,
+      ModifyDate: new Date()
+    }, { transaction: t });
+
+    // --- LOG TO AUDIT ---
+    await db.ApprovalAudit.create({
+      LinkID: generateLinkID(),
+      InvoiceLink: transaction.LinkID,
+      RejectionDate: new Date(),
+      Remarks: "Transaction Voided by User",
+      CreatedBy: userID,
+      CreatedDate: new Date(),
+      ApprovalVersion: transaction.ApprovalVersion
+    }, { transaction: t });
+
+    await t.commit();
+    res.json({ message: 'Voided successfully' });
   } catch (error) {
+    if (t) await t.rollback();
+    console.error('Error voiding purchase request:', error);
     res.status(500).json({ error: error.message });
   }
 };

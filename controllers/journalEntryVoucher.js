@@ -287,9 +287,42 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await JournalEntryVoucherModel.findByPk(req.params.id);
-    if (item) res.json(item);
-    else res.status(404).json({ message: "journalEntryVoucher not found" });
+    const { id } = req.params;
+    const transaction = await TransactionTableModel.findOne({
+      where: { ID: id },
+      attributes: {
+        include: [
+          [
+            literal("CONCAT(`RequestedByEmployee`.`FirstName`, ' ', `RequestedByEmployee`.`MiddleName`, ' ', `RequestedByEmployee`.`LastName`)"),
+            'RequestedByName'
+          ],
+          [literal('`Funds`.`Code`'), 'FundsCode'],
+          [literal('`Funds`.`Name`'), 'FundsName']
+        ]
+      },
+      include: [
+        { model: JournalEntryVoucherModel, as: 'JournalEntries', required: false },
+        { model: AttachmentModel, as: 'Attachments', required: false },
+        { model: EmployeeModel, as: 'RequestedByEmployee', required: false },
+        { model: FundsModel, as: 'Funds', required: false }
+      ]
+    });
+
+    if (transaction) res.json(transaction);
+    else res.status(404).json({ message: "Journal Entry Voucher not found" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getGLEntries = async (req, res) => {
+  try {
+    const { linkID } = req.params;
+    const glEntries = await GeneralLedgerModel.findAll({
+      where: { LinkID: linkID },
+      order: [['CreatedDate', 'ASC']]
+    });
+    res.json(glEntries);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

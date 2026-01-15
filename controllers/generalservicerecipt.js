@@ -2,7 +2,7 @@
 
 const { Sequelize, Op } = require('sequelize');
 const db = require('../config/database');
-const { sequelize, TransactionTable, MarriageRecord, Attachment, documentType, TransactionItems } = require('../config/database');
+const { sequelize, TransactionTable, MarriageRecord, Attachment, documentType, TransactionItems, ApprovalAudit } = require('../config/database');
 const generateLinkID = require("../utils/generateID")
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 
@@ -37,25 +37,25 @@ async function saveTransaction(req, res) {
     }
 
     const {
-        InvoiceDate,
-        CustomerID,
-        CustomerName,
-        PaymentMethodID,
-        Total,
-        AmountReceived,
-        Remarks,
-        AmountinWords,
-        WithheldAmount,
-        Vat_Total,
-        Discounts,
-        AmountDue,
-        VATExcludedPrice,
-        FundsID,
-        CheckNumber,
-        PayeeBank,
-        MoneyOrder,
-        MoneyOrderDate,
-        Attachments = [],
+      InvoiceDate,
+      CustomerID,
+      CustomerName,
+      PaymentMethodID,
+      Total,
+      AmountReceived,
+      Remarks,
+      AmountinWords,
+      WithheldAmount,
+      Vat_Total,
+      Discounts,
+      AmountDue,
+      VATExcludedPrice,
+      FundsID,
+      CheckNumber,
+      PayeeBank,
+      MoneyOrder,
+      MoneyOrderDate,
+      Attachments = [],
     } = parsedFields;
 
     let {
@@ -64,21 +64,21 @@ async function saveTransaction(req, res) {
       Items,
       CheckDate,
     } = parsedFields;
-    
+
     // console.log('Items:', Items);
     // Items = Items ? JSON.parse(Items) : [];
-    
-    if((IsNew == "true") || (IsNew === true) || (IsNew == '1') || (IsNew == 1)) {
+
+    if ((IsNew == "true") || (IsNew === true) || (IsNew == '1') || (IsNew == 1)) {
       IsNew = true;
     }
-    else if((IsNew == "false") || (IsNew === false) || (IsNew == '0') || (IsNew == 0)) {
+    else if ((IsNew == "false") || (IsNew === false) || (IsNew == '0') || (IsNew == 0)) {
       IsNew = false;
     }
     else {
       throw new Error('Invalid value for IsNew. Expected true or false.');
     }
 
-    if(IsNew) {
+    if (IsNew) {
       LinkID = generateLinkID();
     }
 
@@ -92,12 +92,12 @@ async function saveTransaction(req, res) {
       },
       attributes: ['CurrentNumber']
     });
-    if(!documentTypeRecord || !documentTypeRecord.CurrentNumber) {
+    if (!documentTypeRecord || !documentTypeRecord.CurrentNumber) {
       throw new Error('Document type not found or inactive');
     }
     const invoiceNumber = Number(documentTypeRecord.CurrentNumber) + 1;
 
-    if(IsNew) {
+    if (IsNew) {
       await TransactionTable.create({
         LinkID,
         Status: 'Requested',
@@ -137,7 +137,7 @@ async function saveTransaction(req, res) {
         MoneyOrderDate: MoneyOrderDate || null,
       }, { transaction: t });
 
-    
+
       await documentType.update(
         { CurrentNumber: invoiceNumber },
         { where: { ID: docID } }
@@ -282,7 +282,7 @@ const getAll = async (req, res) => {
 
     // const formattedItems = items.map((item) => {
     //   const json = item.toJSON();
-      
+
     //   json.TransactionStatus = json.Transaction?.Status || null;
     //   delete json.Transaction;
 
@@ -301,17 +301,38 @@ const getAll = async (req, res) => {
 
 const deleteTransaction = async (req, res) => {
   const transactionId = req.params.id;
+  const t = await db.sequelize.transaction();
 
   try {
-    // Soft delete
-    await TransactionTable.update(
-      { Active: 0 },
-      { where: { ID: transactionId } }
+    const trx = await TransactionTable.findOne({ where: { ID: transactionId }, transaction: t });
+
+    if (!trx) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
+
+    // Update status to Void instead of soft delete
+    await trx.update(
+      { Status: 'Void' },
+      { transaction: t }
     );
 
+    // Log to ApprovalAudit
+    await ApprovalAudit.create({
+      LinkID: trx.LinkID,
+      InvoiceLink: trx.LinkID,
+      RejectionDate: new Date(),
+      Remarks: 'Voided',
+      CreatedBy: req.user.id,
+      CreatedDate: new Date(),
+      ApprovalVersion: trx.ApprovalVersion
+    }, { transaction: t });
+
+    await t.commit();
     res.status(200).json({ message: 'Success' });
 
   } catch (error) {
+    await t.rollback();
     console.error('Error deleting transaction:', error);
     return res.status(500).json({ message: 'Server error.' });
   }

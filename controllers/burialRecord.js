@@ -1,18 +1,18 @@
 // const {  } = require('../config/database');
-const { sequelize, BurialRecord, TransactionTable, Attachment, documentType, Customer, employee } = require('../config/database');
+const { sequelize, BurialRecord, TransactionTable, Attachment, documentType, Customer, employee, ApprovalAudit } = require('../config/database');
 const PaymentMethodModel = require('../config/database').paymentMethod;
 const db = require('../config/database');
 const generateLinkID = require("../utils/generateID")
-const {getAllWithAssociations}=require("../models/associatedDependency");
+const { getAllWithAssociations } = require("../models/associatedDependency");
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 const { Op, fn, col, literal } = require('sequelize');
 
 exports.saveBurialTransaction = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    
+
     const parsedFields = {};
-    
+
     // Reconstruct Attachments array from fields like Attachments[0].ID starts
     const attachments = [];
     for (const key in req.body) {
@@ -27,7 +27,7 @@ exports.saveBurialTransaction = async (req, res) => {
     }
     parsedFields.Attachments = attachments;
     // Reconstruct Attachments array from fields like Attachments[0].ID ends
-    
+
     for (const key in req.body) {
       try {
         parsedFields[key] = JSON.parse(req.body[key]);
@@ -43,10 +43,10 @@ exports.saveBurialTransaction = async (req, res) => {
     const data = parsedFields;
 
     let IsNew = '';
-    if((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
+    if ((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
       IsNew = true;
     }
-    else if((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
+    else if ((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
       IsNew = false;
     }
     else {
@@ -56,7 +56,7 @@ exports.saveBurialTransaction = async (req, res) => {
     const docID = 18;
 
     const refID = IsNew ? generateLinkID() : data.LinkID;
-    const latestapprovalversion=await getLatestApprovalVersion('Burial Receipt');
+    const latestapprovalversion = await getLatestApprovalVersion('Burial Receipt');
 
     if (IsNew) {
       // Create Transaction Table record
@@ -87,7 +87,7 @@ exports.saveBurialTransaction = async (req, res) => {
         FundsID: 1
       }, { transaction: t });
 
-      
+
       await documentType.increment(
         { CurrentNumber: 1 },
         {
@@ -258,16 +258,38 @@ exports.getById = async (req, res) => {
 
 exports.delete = async (req, res) => {
   const transactionId = req.params.id;
-  try {
-    await TransactionTable.destroy({
-      where: {
-        ID: transactionId
-      }
-    });
+  const t = await sequelize.transaction();
 
+  try {
+    const trx = await TransactionTable.findOne({ where: { ID: transactionId }, transaction: t });
+
+    if (!trx) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
+
+    // Update status to Void instead of hard delete
+    await trx.update(
+      { Status: 'Void' },
+      { transaction: t }
+    );
+
+    // Log to ApprovalAudit
+    await ApprovalAudit.create({
+      LinkID: trx.LinkID,
+      InvoiceLink: trx.LinkID,
+      RejectionDate: new Date(),
+      Remarks: 'Voided',
+      CreatedBy: req.user.id,
+      CreatedDate: new Date(),
+      ApprovalVersion: trx.ApprovalVersion
+    }, { transaction: t });
+
+    await t.commit();
     res.status(200).json({ message: 'Success' });
 
   } catch (error) {
+    await t.rollback();
     console.error('Error deleting transaction:', error);
     return res.status(500).json({ error: error.message || 'Server error.' });
   }

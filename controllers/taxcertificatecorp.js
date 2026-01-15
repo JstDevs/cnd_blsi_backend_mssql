@@ -3,40 +3,40 @@
 
 const db = require('../config/database');
 const { sequelize, Customer, employee, TransactionTable, TransactionItems, documentType, industryType } = require('../config/database');
-const IndustryType=industryType
-const {getAllWithAssociations}=require("../models/associatedDependency");
+const IndustryType = industryType
+const { getAllWithAssociations } = require("../models/associatedDependency");
 const generateLinkID = require("../utils/generateID")
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 const { Op, literal } = require('sequelize');
 
-exports.save= async (req, res) => {
+exports.save = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
     const data = req.body;
 
     let IsNew = '';
     let IsSelectedFromIndividual = '';
-    if((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
+    if ((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
       IsNew = true;
     }
-    else if((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
+    else if ((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
       IsNew = false;
     }
     else {
       throw new Error('Invalid value for IsNew. Expected true or false.');
     }
 
-    if((data.IsSelectedFromIndividual == "true") || (data.IsSelectedFromIndividual === true) || (data.IsSelectedFromIndividual == '1') || (data.IsSelectedFromIndividual == 1)) {
+    if ((data.IsSelectedFromIndividual == "true") || (data.IsSelectedFromIndividual === true) || (data.IsSelectedFromIndividual == '1') || (data.IsSelectedFromIndividual == 1)) {
       IsSelectedFromIndividual = true;
     }
-    else if((data.IsSelectedFromIndividual == "false") || (data.IsSelectedFromIndividual === false) || (data.IsSelectedFromIndividual == '0') || (data.IsSelectedFromIndividual == 0)) {
+    else if ((data.IsSelectedFromIndividual == "false") || (data.IsSelectedFromIndividual === false) || (data.IsSelectedFromIndividual == '0') || (data.IsSelectedFromIndividual == 0)) {
       IsSelectedFromIndividual = false;
     }
     else {
       throw new Error('Invalid value for IsSelectedFromIndividual. Expected true or false.');
     }
 
-    const docID=27;
+    const docID = 27;
 
     const cleanedAddress = data.Address.replace(/(,\s*)+$/, '');
 
@@ -102,7 +102,7 @@ exports.save= async (req, res) => {
       customerId = data.CustomerID;
     }
 
-    const latestapprovalversion=await getLatestApprovalVersion('Community Tax');
+    const latestapprovalversion = await getLatestApprovalVersion('Community Tax');
 
     if (IsNew) {
       await TransactionTable.create({
@@ -189,7 +189,7 @@ exports.save= async (req, res) => {
 };
 
 
-exports.getAll=async (req, res) => {
+exports.getAll = async (req, res) => {
   try {
     const records = await TransactionTable.findAll({
       where: {
@@ -232,17 +232,81 @@ exports.delete = async (req, res) => {
     }
 
     await TransactionTable.update({
-        Status: 'Void',
-        CreatedDate: new Date(),
-        CreatedBy: req.user.id,
-      },
+      Status: 'Void',
+      CreatedDate: new Date(),
+      CreatedBy: req.user.id,
+    },
       {
         where: { ID: id }
-    });
+      });
 
     res.json({ message: "success" });
   } catch (err) {
     console.error('❌ Error deleting CTC:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.approve = async (req, res) => {
+  const { ID } = req.body;
+  const id = ID;
+
+  const t = await db.sequelize.transaction();
+  try {
+    const trx = await TransactionTable.findOne({ where: { ID: id }, transaction: t });
+    if (!trx) return res.status(404).json({ error: 'Transaction not found' });
+
+    const approvalProgress = Number(trx.ApprovalProgress) || 0;
+
+    await trx.update({ ApprovalProgress: approvalProgress + 1, Status: 'Posted' }, { transaction: t });
+
+    await db.ApprovalAudit.create({
+      LinkID: trx.LinkID,
+      InvoiceLink: trx.LinkID,
+      PositionorEmployee: 'Employee',
+      PositionorEmployeeID: req.user?.employeeID || null,
+      SequenceOrder: approvalProgress,
+      ApprovalDate: new Date(),
+      CreatedBy: req.user?.id || null,
+      CreatedDate: new Date(),
+      ApprovalVersion: trx.ApprovalVersion
+    }, { transaction: t });
+
+    await t.commit();
+    res.json({ message: 'Approved successfully' });
+  } catch (err) {
+    await t.rollback();
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.reject = async (req, res) => {
+  const { ID } = req.body;
+  const id = ID;
+
+  const t = await db.sequelize.transaction();
+  try {
+    const trx = await TransactionTable.findOne({ where: { ID: id }, transaction: t });
+    if (!trx) return res.status(404).json({ error: 'Transaction not found' });
+
+    await trx.update({ Status: 'Rejected', ApprovalProgress: 0 }, { transaction: t });
+
+    await db.ApprovalAudit.create({
+      LinkID: trx.LinkID,
+      InvoiceLink: trx.LinkID,
+      RejectionDate: new Date(),
+      Remarks: req.body.reason || '',
+      CreatedBy: trx.CreatedBy,
+      CreatedDate: new Date(),
+      ApprovalVersion: trx.ApprovalVersion
+    }, { transaction: t });
+
+    await t.commit();
+    res.json({ message: 'Transaction rejected successfully' });
+  } catch (err) {
+    await t.rollback();
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };

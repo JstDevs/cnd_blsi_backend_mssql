@@ -7,6 +7,9 @@ const requireAuth = require('../middleware/requireAuth');
 router.post('/save', requireAuth, controller.save);
 router.get('/getall', requireAuth, controller.getAll);
 router.delete('/:id', requireAuth, controller.delete);
+router.post('/approve', requireAuth, controller.approve);
+router.post('/reject', requireAuth, controller.reject);
+
 // Get single certificate
 // router.get('/:id', async (req, res) => {
 //   try {

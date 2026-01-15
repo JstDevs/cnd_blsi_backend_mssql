@@ -550,24 +550,45 @@ exports.delete = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
     const { LinkID } = req.query;
+    const userID = req.user?.id ?? 1;
 
     // Validate existence
     const transaction = await TransactionTableModel.findOne({ where: { LinkID } });
     if (!transaction) {
+      await t.rollback();
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    // Delete related journal entries
-    await JournalEntryVoucherModel.destroy({ where: { LinkID }, transaction: t });
-    await AttachmentModel.destroy({ where: { LinkID }, transaction: t });
-    await TransactionTableModel.destroy({ where: { LinkID }, transaction: t });
+    // --- REVERT General Ledger IF POSTED ---
+    if (transaction.Status === 'Posted') {
+      await GeneralLedgerModel.destroy({ where: { LinkID }, transaction: t });
+    }
+
+    // --- VOID Transaction ---
+    await transaction.update({
+      Status: 'Void',
+      Active: true,
+      ModifyBy: userID,
+      ModifyDate: new Date()
+    }, { transaction: t });
+
+    // --- LOG TO AUDIT ---
+    await ApprovalAuditModel.create({
+      LinkID: generateLinkID(),
+      InvoiceLink: transaction.LinkID,
+      RejectionDate: new Date(),
+      Remarks: "Transaction Voided by User",
+      CreatedBy: userID,
+      CreatedDate: new Date(),
+      ApprovalVersion: transaction.ApprovalVersion
+    }, { transaction: t });
 
     await t.commit();
-    res.json({ message: 'Deleted successfully' });
+    res.json({ message: 'Voided successfully' });
 
   } catch (err) {
-    await t.rollback();
-    console.error('❌ Error deleting journal entry:', err);
+    if (t) await t.rollback();
+    console.error('❌ Error voiding journal entry:', err);
     res.status(500).json({ error: err.message || 'Internal server error' });
   }
 };

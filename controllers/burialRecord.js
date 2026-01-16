@@ -294,3 +294,64 @@ exports.delete = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Server error.' });
   }
 };
+
+exports.approve = async (req, res) => {
+  const { ID } = req.body;
+  const t = await sequelize.transaction();
+  try {
+    const trx = await TransactionTable.findOne({ where: { ID }, transaction: t });
+    
+    if (!trx) throw new Error('Transaction not found.');
+
+    await trx.update({ Status: 'Approved' }, { transaction: t });
+
+    await ApprovalAudit.create({
+      LinkID: trx.LinkID,
+      InvoiceLink: trx.LinkID,
+      PositionorEmployee: "Employee",
+      PositionorEmployeeID: req.user.employeeID,
+      SequenceOrder: trx.ApprovalProgress,
+      ApprovalOrder: 0,
+      ApprovalDate: new Date(),
+      CreatedBy: req.user.id,
+      CreatedDate: new Date(),
+      ApprovalVersion: trx.ApprovalVersion
+    }, { transaction: t });
+
+    await t.commit();
+    res.json({ message: 'Transaction approved successfully.' });
+  } catch (error) { 
+    await t.rollback();
+    console.error('Error approving transaction:', error);
+    res.status(500).json({ error: error.message || 'Server error.' });
+  }
+};
+
+exports.reject = async (req, res) => {
+  const { ID, reason } = req.body;
+  const t = await sequelize.transaction();
+
+  try { const trx = await TransactionTable.findOne ({ where: { ID }, transaction: t});
+
+    if (!trx) throw new Error('Transaction not found.');
+
+    await trx.update({ Status: 'Rejected' }, { transaction: t });
+
+    await ApprovalAudit.create({
+      LinkID: trx.LinkID,
+      InvoiceLink: trx.LinkID,
+      RejectionDate: new Date(),
+      Remarks: reason,
+      CreatedBy: req.user.id,
+      CreatedDate: new Date(),
+      ApprovalVersion: trx.ApprovalVersion
+    }, { transaction: t });
+
+    await t.commit();
+    res.json({ message: 'Transaction rejected successfully.' });
+  } catch (error) { 
+    await t.rollback();
+    console.error('Error rejecting transaction:', error);
+    res.status(500).json({ error: error.message || 'Server error.' });
+  }
+};

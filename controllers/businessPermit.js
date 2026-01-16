@@ -68,21 +68,44 @@ exports.update = async (req, res) => {
     }
 };
 
-// Delete a Business Permit
+// Void a Business Permit (replacing hard delete)
 exports.delete = async (req, res) => {
+    const { id } = req.params;
+    const t = await sequelize.transaction();
     try {
-        const { id } = req.params;
-        const permit = await BusinessPermit.findByPk(id);
+        const permit = await BusinessPermit.findByPk(id, { transaction: t });
 
         if (!permit) {
             return res.status(404).json({ message: 'Business permit not found' });
         }
 
-        await permit.destroy();
-        res.status(200).json({ message: 'Business permit deleted successfully', id });
+        // Update status to Void instead of deleting
+        await permit.update({ status: 'Void' }, { transaction: t });
+
+        // Log the void action to ApprovalAudit
+        await ApprovalAudit.create({
+            LinkID: id,
+            InvoiceLink: id,
+            PositionorEmployee: "Employee",
+            PositionorEmployeeID: req.user.employeeID,
+            SequenceOrder: 0,
+            ApprovalOrder: 0,
+            Remarks: "Voided",
+            RejectionDate: new Date(), // Using RejectionDate to store void date for audit
+            CreatedBy: req.user.id,
+            CreatedDate: new Date(),
+            ApprovalVersion: "1"
+        }, { transaction: t });
+
+        await t.commit();
+        res.status(200).json({ message: 'Business permit voided successfully', id, status: 'Void' });
     } catch (error) {
-        console.error('Error deleting business permit:', error);
-        res.status(500).json({ message: 'Failed to delete business permit', error: error.message });
+        if (t) await t.rollback();
+        console.error('Error voiding business permit:', error);
+        res.status(500).json({
+            message: 'Failed to void business permit',
+            error: error.message
+        });
     }
 };
 
@@ -112,9 +135,12 @@ exports.approve = async (req, res) => {
         await t.commit();
         res.json({ message: 'Business permit approved and posted successfully.' });
     } catch (error) {
-        await t.rollback();
+        if (t) await t.rollback();
         console.error('Error approving business permit:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            error: 'Internal Server Error during approval',
+            details: error.message
+        });
     }
 };
 
@@ -131,6 +157,10 @@ exports.reject = async (req, res) => {
         await ApprovalAudit.create({
             LinkID: id,
             InvoiceLink: id,
+            PositionorEmployee: "Employee",
+            PositionorEmployeeID: req.user.employeeID,
+            SequenceOrder: 0,
+            ApprovalOrder: 0,
             Remarks: reason,
             RejectionDate: new Date(),
             CreatedBy: req.user.id,
@@ -141,8 +171,11 @@ exports.reject = async (req, res) => {
         await t.commit();
         res.json({ message: 'Business permit rejected successfully.' });
     } catch (error) {
-        await t.rollback();
+        if (t) await t.rollback();
         console.error('Error rejecting business permit:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            error: 'Internal Server Error during rejection',
+            details: error.message
+        });
     }
 };

@@ -190,10 +190,13 @@ exports.save = async (req, res) => {
         credit = itm.subtotal;
       }
 
+      /* 
       const tax = await TaxCodeModel.findByPk(itm.TAXCodeID, { transaction: t });
       if (!tax) {
         throw new Error(`Tax Code with ID ${itm.TAXCodeID} not found`);
-      }
+      } 
+      */
+      const tax = itm.TAXCodeID ? await TaxCodeModel.findByPk(itm.TAXCodeID, { transaction: t }) : null;
 
       const UniqueID = generateLinkID();
 
@@ -205,9 +208,9 @@ exports.save = async (req, res) => {
         Quantity: itm.Quantity,
         ItemUnitID: itm.ItemUnitID,
         Price: itm.Price,
-        TAXCodeID: itm.TAXCodeID,
-        TaxName: tax.Name,
-        TaxRate: tax.Rate,
+        TAXCodeID: itm.TAXCodeID || null,
+        TaxName: tax ? tax.Name : (itm.TaxName || null),
+        TaxRate: tax ? tax.Rate : (itm.TaxRate || 0),
         Sub_Total_Vat_Ex: itm.subtotalTaxExcluded,
         Active: true,
         CreatedBy: req.user.id,
@@ -413,10 +416,13 @@ exports.create = async (req, res) => {
         credit = itm.subtotal;
       }
 
+      /*
       const tax = await TaxCodeModel.findByPk(itm.TAXCodeID, { transaction: trx });
       if (!tax) {
         throw new Error(`Tax Code with ID ${itm.TAXCodeID} not found`);
       }
+      */
+      const tax = itm.TAXCodeID ? await TaxCodeModel.findByPk(itm.TAXCodeID, { transaction: trx }) : null;
 
       const UniqueID = generateLinkID();
       await TransactionItemsModel.create(
@@ -428,9 +434,9 @@ exports.create = async (req, res) => {
           Quantity: itm.Quantity,
           ItemUnitID: itm.ItemUnitID,
           Price: itm.Price,
-          TAXCodeID: itm.TAXCodeID,
-          TaxName: tax.Name,
-          TaxRate: tax.Rate,
+          TAXCodeID: itm.TAXCodeID || null,
+          TaxName: tax ? tax.Name : (itm.TaxName || null),
+          TaxRate: tax ? tax.Rate : (itm.TaxRate || 0),
           Sub_Total_Vat_Ex: itm.subtotalTaxExcluded,
           Active: true,
           CreatedBy: req.user.id,
@@ -575,21 +581,11 @@ exports.update = async (req, res) => {
     }
 
 
-    if (PayeeType === "New") {
-      const customer = await CustomerModel.create(
-        {
-          Name,
-          StreetAddress,
-          TIN: 0,
-          ContactPerson: "None",
-          Type: "Individual",
-          Active: true,
-          CreatedBy: req.user.id,
-          CreatedDate: new Date()
-        },
-        { transaction: trx }
-      );
-      CustomerID = customer.ID;
+    if (header.Status === 'Void') {
+      throw new Error("Cannot update a Voided Fund Utilization Request.");
+    }
+    if (header.Status === 'Posted') {
+      throw new Error("Cannot update a Posted Fund Utilization Request.");
     }
 
 
@@ -624,16 +620,16 @@ exports.update = async (req, res) => {
 
 
     // Step 1: Fetch existing for budget reversal
-    // const existingItems = await TransactionItemsModel.findAll({
-    //   where: { LinkID },
-    //   transaction: trx
-    // });
+    const existingItems = await TransactionItemsModel.findAll({
+      where: { LinkID },
+      transaction: trx
+    });
 
-    // const oldTotals = {};
-    // existingItems.forEach(it => {
-    //   oldTotals[it.ChargeAccountID] =
-    //     (oldTotals[it.ChargeAccountID] || 0) + Number(it.Sub_Total || 0);
-    // });
+    const budgetChanges = {};
+    existingItems.forEach(it => {
+      const amount = parseFloat(it.AmountDue || it.Sub_Total || 0);
+      budgetChanges[it.ChargeAccountID] = (budgetChanges[it.ChargeAccountID] || 0) - amount;
+    });
 
     // Step 2: Delete all old items
     await TransactionItemsModel.destroy({
@@ -642,23 +638,77 @@ exports.update = async (req, res) => {
     });
 
     // Step 3: Create all new items
-    const newTotals = {};
-    const newRecords = Items.map(itm => {
-      newTotals[itm.ChargeAccountID] =
-        (newTotals[itm.ChargeAccountID] || 0) + Number(itm.Sub_Total || 0);
+    const uniqueChargeAccountIds = [...new Set(Items.map(i => i.ChargeAccountID))];
+    const budgets = await BudgetModel.findAll({
+      where: { ID: { [Op.in]: uniqueChargeAccountIds } },
+      include: [{ model: ChartofAccountsModel, as: 'ChartofAccounts', attributes: ['NormalBalance'] }],
+      transaction: trx
+    });
+    const budgetMap = new Map(budgets.map(b => [b.ID, b]));
 
-      return {
-        ...itm,
+    for (const itm of Items) {
+      const account = budgetMap.get(itm.ChargeAccountID);
+      if (!account) throw new Error(`Charge Account ID ${itm.ChargeAccountID} not found`);
+
+      const subTotal = parseFloat(itm.Sub_Total || itm.subtotal || 0);
+      budgetChanges[itm.ChargeAccountID] = (budgetChanges[itm.ChargeAccountID] || 0) + subTotal;
+
+      const amountDue = parseFloat(itm.AmountDue || itm.subtotal || 0);
+      const subtotalBeforeDiscount = parseFloat(itm.Sub_Total || itm.subtotalBeforeDiscount || 0);
+
+      let credit = 0;
+      let debit = 0;
+      if (account.ChartofAccounts?.NormalBalance === 'Debit') debit = subTotal;
+      else if (account.ChartofAccounts?.NormalBalance === 'Credit') credit = subTotal;
+
+      /*
+      const tax = itm.TAXCodeID ? await TaxCodeModel.findByPk(itm.TAXCodeID, { transaction: trx }) : null;
+      */
+
+      const UniqueID = generateLinkID();
+      await TransactionItemsModel.create({
+        UniqueID,
         LinkID,
-        InvoiceNumber,
+        ItemID: itm.ItemID,
+        ChargeAccountID: itm.ChargeAccountID,
+        Quantity: itm.Quantity,
+        ItemUnitID: itm.ItemUnitID,
+        Price: itm.Price,
+        TAXCodeID: itm.TAXCodeID || null,
+        TaxName: itm.TaxName || null,
+        TaxRate: itm.TaxRate || 0,
+        Sub_Total_Vat_Ex: itm.Sub_Total_Vat_Ex || itm.subtotalTaxExcluded,
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
-      };
-    });
+        CreatedDate: new Date(),
+        Credit: credit,
+        Debit: debit,
+        Vat_Total: itm.Vat_Total || itm.vat,
+        EWT: itm.EWT || itm.ewt,
+        WithheldAmount: itm.WithheldAmount || itm.withheld,
+        Sub_Total: subtotalBeforeDiscount,
+        EWTRate: itm.EWTRate || itm.ewtrate,
+        Discounts: itm.Discounts || itm.discount,
+        DiscountRate: itm.DiscountRate,
+        AmountDue: amountDue,
+        PriceVatExclusive: itm.PriceVatExclusive || itm.subtotalTaxExcluded,
+        Remarks: itm.Remarks,
+        FPP: itm.FPP,
+        Discounted: itm.Discounted,
+        InvoiceNumber: InvoiceNumber,
+        NormalBalance: account.ChartofAccounts?.NormalBalance,
+        ResponsibilityCenter: itm.ResponsibilityCenter,
+        Vatable: itm.Vatable
+      }, { transaction: trx });
+    }
 
-    if (newRecords.length > 0) {
-      await TransactionItemsModel.bulkCreate(newRecords, { transaction: trx });
+    // Apply aggregated budget changes
+    for (const [chargeId, diff] of Object.entries(budgetChanges)) {
+      if (diff > 0) {
+        await BudgetModel.increment({ PreEncumbrance: diff }, { where: { ID: chargeId }, transaction: trx });
+      } else if (diff < 0) {
+        await BudgetModel.decrement({ PreEncumbrance: Math.abs(diff) }, { where: { ID: chargeId }, transaction: trx });
+      }
     }
 
 
@@ -818,16 +868,26 @@ exports.approveTransaction = async (req, res) => {
     if (newStatus === "Posted" && !alreadyPosted) {
       // Logic to move PreEncumbrance to Encumbrance in Budget
       const items = await TransactionItemsModel.findAll({ where: { LinkID: transaction.LinkID }, transaction: t });
-      for (const item of items) {
-        const budget = await BudgetModel.findByPk(item.ChargeAccountID, { transaction: t });
-        if (budget) {
-          const amount = Number(item.AmountDue || 0);
-          await budget.update({
-            PreEncumbrance: Math.max(0, Number(budget.PreEncumbrance) - amount),
-            Encumbrance: Number(budget.Encumbrance) + amount
-          }, { transaction: t });
+
+      const budgetUpdates = {};
+      items.forEach(item => {
+        const amount = parseFloat(item.AmountDue || item.Sub_Total || 0);
+        if (amount > 0) {
+          if (!budgetUpdates[item.ChargeAccountID]) {
+            budgetUpdates[item.ChargeAccountID] = { pre: 0, enc: 0 };
+          }
+          budgetUpdates[item.ChargeAccountID].pre += amount;
+          budgetUpdates[item.ChargeAccountID].enc += amount;
         }
+      });
+
+      for (const [chargeId, updates] of Object.entries(budgetUpdates)) {
+        await BudgetModel.update({
+          PreEncumbrance: literal(`GREATEST(0, CAST(PreEncumbrance AS DECIMAL(18,2)) - ${updates.pre})`),
+          Encumbrance: literal(`CAST(Encumbrance AS DECIMAL(18,2)) + ${updates.enc}`)
+        }, { where: { ID: chargeId }, transaction: t });
       }
+
       // Update DocType series
       await DocumentTypeModel.update({ CurrentNumber: Number(currentNumber) }, { where: { Name: "Fund Utilization Request" }, transaction: t });
     }
@@ -862,8 +922,18 @@ exports.rejectTransaction = async (req, res) => {
 
     // Revert PreEncumbrance
     const items = await TransactionItemsModel.findAll({ where: { LinkID: transaction.LinkID }, transaction: t });
-    for (const item of items) {
-      await BudgetModel.decrement({ PreEncumbrance: Number(item.AmountDue || 0) }, { where: { ID: item.ChargeAccountID }, transaction: t });
+    if (items.length > 0) {
+      const budgetUpdates = {};
+      items.forEach(item => {
+        const amount = parseFloat(item.AmountDue || item.Sub_Total || 0);
+        if (amount > 0) {
+          budgetUpdates[item.ChargeAccountID] = (budgetUpdates[item.ChargeAccountID] || 0) + amount;
+        }
+      });
+
+      for (const [chargeId, amount] of Object.entries(budgetUpdates)) {
+        await BudgetModel.decrement({ PreEncumbrance: amount }, { where: { ID: chargeId }, transaction: t });
+      }
     }
 
     await ApprovalAudit.create({
@@ -897,8 +967,39 @@ exports.delete = async (req, res) => {
       return res.status(404).json({ message: 'Transaction not found.' });
     }
 
+    if (trx.Status === 'Posted') {
+      throw new Error('Cannot void a Posted Fund Utilization Request. Please reject or reverse it instead.');
+    }
+
+    // --- REVERT Budget Pre-Encumbrance ---
+    const items = await TransactionItemsModel.findAll({
+      where: { LinkID: trx.LinkID },
+      transaction: t
+    });
+
+    if (items.length > 0) {
+      const budgetUpdates = {};
+      items.forEach(item => {
+        const amount = parseFloat(item.AmountDue || item.Sub_Total || 0);
+        if (amount > 0) {
+          budgetUpdates[item.ChargeAccountID] = (budgetUpdates[item.ChargeAccountID] || 0) + amount;
+        }
+      });
+
+      for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
+        await BudgetModel.decrement(
+          { PreEncumbrance: totalAmount },
+          { where: { ID: chargeAccountId }, transaction: t }
+        );
+      }
+    }
+
     // Update status to Void
-    await trx.update({ Status: 'Void' }, { transaction: t });
+    await trx.update({
+      Status: 'Void',
+      ModifyBy: req.user.id,
+      ModifyDate: new Date()
+    }, { transaction: t });
 
     // Log the void action
     await ApprovalAudit.create(

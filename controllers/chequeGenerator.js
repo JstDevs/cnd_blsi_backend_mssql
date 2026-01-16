@@ -109,7 +109,18 @@ exports.save = async (req, res) => {
         );
         await TransactionTableModel.update(
           { Status: 'Posted, Disbursement Posted, Cheque Requested' },
-          { where: { InvoiceNumber: data.OBR }, transaction: t }
+          {
+            where: {
+              InvoiceNumber: data.OBR,
+              APAR: {
+                [Op.or]: [
+                  { [Op.like]: "Obligation Request%" },
+                  { [Op.like]: "Fund Utilization Request%" }
+                ]
+              }
+            },
+            transaction: t
+          }
         );
       }
     } else {
@@ -227,7 +238,12 @@ exports.delete = async (req, res) => {
             {
               where: {
                 InvoiceNumber: dv.ObligationRequestNumber,
-                APAR: 'Obligation Request'
+                APAR: {
+                  [Op.or]: [
+                    { [Op.like]: "Obligation Request%" },
+                    { [Op.like]: "Fund Utilization Request%" }
+                  ]
+                }
               },
               transaction: t
             }
@@ -296,7 +312,12 @@ exports.approve = async (req, res) => {
           {
             where: {
               InvoiceNumber: dv.ObligationRequestNumber,
-              APAR: { [Op.like]: 'Obligation Request%' }
+              APAR: {
+                [Op.or]: [
+                  { [Op.like]: "Obligation Request%" },
+                  { [Op.like]: "Fund Utilization Request%" }
+                ]
+              }
             },
             transaction: t
           }
@@ -361,7 +382,12 @@ exports.reject = async (req, res) => {
           {
             where: {
               InvoiceNumber: dv.ObligationRequestNumber,
-              APAR: { [Op.like]: 'Obligation Request%' }
+              APAR: {
+                [Op.or]: [
+                  { [Op.like]: "Obligation Request%" },
+                  { [Op.like]: "Fund Utilization Request%" }
+                ]
+              }
             },
             transaction: t
           }

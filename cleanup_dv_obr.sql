@@ -13,36 +13,36 @@ START TRANSACTION;
 DELETE FROM transactionitems 
 WHERE LinkID IN (
     SELECT LinkID FROM transactiontable 
-    WHERE DocumentTypeID IN (13, 14)
+    WHERE DocumentTypeID IN (13, 14, 31)
 );
 
 DELETE FROM attachment 
 WHERE LinkID IN (
     SELECT LinkID FROM transactiontable 
-    WHERE DocumentTypeID IN (13, 14)
+    WHERE DocumentTypeID IN (13, 14, 31)
 );
 
 DELETE FROM approvalaudit 
 WHERE InvoiceLink IN (
     SELECT LinkID FROM transactiontable 
-    WHERE DocumentTypeID IN (13, 14)
+    WHERE DocumentTypeID IN (13, 14, 31)
 );
 
 DELETE FROM contraaccount 
 WHERE LinkID IN (
     SELECT LinkID FROM transactiontable 
-    WHERE DocumentTypeID IN (13, 14)
+    WHERE DocumentTypeID IN (13, 14, 31)
 );
 
 DELETE FROM generalledger 
 WHERE LinkID IN (
     SELECT LinkID FROM transactiontable 
-    WHERE DocumentTypeID IN (13, 14)
+    WHERE DocumentTypeID IN (13, 14, 31)
 );
 
 -- 2. Delete The Transactions Themselves (OBR and DV)
 DELETE FROM transactiontable 
-WHERE DocumentTypeID IN (13, 14);
+WHERE DocumentTypeID IN (13, 14, 31);
 
 -- 3. Reset Budget Balances
 -- Since we deleted all OBRs and DVs, the "usage" of the budget is reset.

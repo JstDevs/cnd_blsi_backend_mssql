@@ -963,7 +963,12 @@ exports.approve = async (req, res) => {
         {
           where: {
             InvoiceNumber: trx.ObligationRequestNumber,
-            APAR: { [Op.like]: "Obligation Request%" }
+            APAR: {
+              [Op.or]: [
+                { [Op.like]: "Obligation Request%" },
+                { [Op.like]: "Fund Utilization Request%" }
+              ]
+            }
           },
           transaction: t
         }
@@ -1020,7 +1025,12 @@ exports.reject = async (req, res) => {
         {
           where: {
             InvoiceNumber: trx.ObligationRequestNumber,
-            APAR: { [Op.like]: 'Obligation Request%' }
+            APAR: {
+              [Op.or]: [
+                { [Op.like]: 'Obligation Request%' },
+                { [Op.like]: 'Fund Utilization Request%' }
+              ]
+            }
           },
           transaction: t
         }

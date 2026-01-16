@@ -300,10 +300,10 @@ exports.approve = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const trx = await TransactionTable.findOne({ where: { ID }, transaction: t });
-    
+
     if (!trx) throw new Error('Transaction not found.');
 
-    await trx.update({ Status: 'Approved' }, { transaction: t });
+    await trx.update({ Status: 'Posted' }, { transaction: t });
 
     await ApprovalAudit.create({
       LinkID: trx.LinkID,
@@ -320,7 +320,7 @@ exports.approve = async (req, res) => {
 
     await t.commit();
     res.json({ message: 'Transaction approved successfully.' });
-  } catch (error) { 
+  } catch (error) {
     await t.rollback();
     console.error('Error approving transaction:', error);
     res.status(500).json({ error: error.message || 'Server error.' });
@@ -331,7 +331,8 @@ exports.reject = async (req, res) => {
   const { ID, reason } = req.body;
   const t = await sequelize.transaction();
 
-  try { const trx = await TransactionTable.findOne ({ where: { ID }, transaction: t});
+  try {
+    const trx = await TransactionTable.findOne({ where: { ID }, transaction: t });
 
     if (!trx) throw new Error('Transaction not found.');
 
@@ -349,7 +350,7 @@ exports.reject = async (req, res) => {
 
     await t.commit();
     res.json({ message: 'Transaction rejected successfully.' });
-  } catch (error) { 
+  } catch (error) {
     await t.rollback();
     console.error('Error rejecting transaction:', error);
     res.status(500).json({ error: error.message || 'Server error.' });

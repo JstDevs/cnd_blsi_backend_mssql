@@ -3,7 +3,7 @@ const { sequelize, MarriageRecord, TransactionTable, Attachment, documentType, C
 const PaymentMethodModel = require('../config/database').paymentMethod;
 const db = require('../config/database');
 const generateLinkID = require("../utils/generateID")
-const {getAllWithAssociations}=require("../models/associatedDependency");
+const { getAllWithAssociations } = require("../models/associatedDependency");
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 const { Op, fn, col, literal } = require('sequelize');
 const Position = require('../models/Position');
@@ -11,9 +11,9 @@ const Position = require('../models/Position');
 exports.saveTransaction = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    
+
     const parsedFields = {};
-    
+
     // Reconstruct Attachments array from fields like Attachments[0].ID starts
     const attachments = [];
     for (const key in req.body) {
@@ -44,10 +44,10 @@ exports.saveTransaction = async (req, res) => {
     const data = parsedFields;
 
     let IsNew = '';
-    if((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
+    if ((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
       IsNew = true;
     }
-    else if((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
+    else if ((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
       IsNew = false;
     }
     else {
@@ -57,7 +57,7 @@ exports.saveTransaction = async (req, res) => {
     const docID = 19;
 
     const refID = IsNew ? generateLinkID() : data.LinkID;
-    const latestapprovalversion=await getLatestApprovalVersion('Marriage Receipt');
+    const latestapprovalversion = await getLatestApprovalVersion('Marriage Receipt');
 
     if (IsNew) {
       // Create Transaction Table record
@@ -89,7 +89,7 @@ exports.saveTransaction = async (req, res) => {
         FundsID: 1
       }, { transaction: t });
 
-      
+
       await documentType.increment(
         { CurrentNumber: 1 },
         {
@@ -268,7 +268,7 @@ exports.approve = async (req, res) => {
 
     if (!trx) throw new Error('Transaction not found.');
 
-    await trx.update({ Status: 'Approved' }, { transaction: t });
+    await trx.update({ Status: 'Posted' }, { transaction: t });
 
     await ApprovalAudit.create({
       LinkID: trx.LinkID,
@@ -285,7 +285,7 @@ exports.approve = async (req, res) => {
 
     await t.commit();
     res.json({ message: 'Transaction approved successfully.' });
-  } catch (error) { 
+  } catch (error) {
     await t.rollback();
     res.status(500).json({ error: error.message });
   }
@@ -295,7 +295,7 @@ exports.reject = async (req, res) => {
   const { ID } = req.body;
   const t = await sequelize.transaction();
   try {
-    const trx = await TransactionTable.findOne ({ where: { ID }, transaction: t });
+    const trx = await TransactionTable.findOne({ where: { ID }, transaction: t });
 
     if (!trx) throw new Error('Transaction not found.');
 
@@ -316,7 +316,7 @@ exports.reject = async (req, res) => {
 
     await t.commit();
     res.json({ message: 'Transaction rejected successfully.' });
-     
+
   } catch (error) {
     await t.rollback();
     res.status(500).json({ error: error.message });

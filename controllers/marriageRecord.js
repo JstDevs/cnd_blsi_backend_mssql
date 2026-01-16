@@ -245,17 +245,38 @@ exports.getById = async (req, res) => {
 
 exports.delete = async (req, res) => {
   const transactionId = req.params.id;
+  const t = await sequelize.transaction();
   try {
-    await TransactionTable.destroy({
-      where: {
-        ID: transactionId
-      }
-    });
+    const trx = await TransactionTable.findOne({ where: { ID: transactionId }, transaction: t });
 
-    res.status(200).json({ message: 'Success' });
+    if (!trx) {
+      return res.status(404).json({ message: 'Transaction not found.' });
+    }
+
+    // Update status to Void
+    await trx.update({ Status: 'Void' }, { transaction: t });
+
+    // Log the void action
+    await ApprovalAudit.create({
+      LinkID: trx.LinkID,
+      InvoiceLink: trx.LinkID,
+      PositionorEmployee: "Employee",
+      PositionorEmployeeID: req.user.employeeID,
+      SequenceOrder: trx.ApprovalProgress || 0,
+      ApprovalOrder: 0,
+      Remarks: "Voided",
+      RejectionDate: new Date(),
+      CreatedBy: req.user.id,
+      CreatedDate: new Date(),
+      ApprovalVersion: trx.ApprovalVersion || "1"
+    }, { transaction: t });
+
+    await t.commit();
+    res.status(200).json({ message: 'Marriage record voided successfully', ID: transactionId, Status: 'Void' });
 
   } catch (error) {
-    console.error('Error deleting transaction:', error);
+    if (t) await t.rollback();
+    console.error('Error voiding transaction:', error);
     return res.status(500).json({ error: error.message || 'Server error.' });
   }
 };

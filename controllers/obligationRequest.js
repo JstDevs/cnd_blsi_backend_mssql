@@ -214,7 +214,21 @@ exports.create = async (req, res) => {
         ]
       },
       include: [
-        { model: TransactionItems, as: 'TransactionItemsAll', required: false },
+        {
+          model: TransactionItems,
+          as: 'TransactionItemsAll',
+          required: false,
+          include: [
+            {
+              model: BudgetModel,
+              as: 'ChargeAccount',
+              include: [
+                { model: DepartmentModel, as: 'Department' },
+                { model: ChartofAccountsModel, as: 'ChartofAccounts' }
+              ]
+            }
+          ]
+        },
         { model: Customer, as: 'Customer', required: false },
         {
           model: EmployeeModel,
@@ -270,7 +284,17 @@ exports.getAll = async (req, res) => {
         {
           model: TransactionItems,
           as: 'TransactionItemsAll',
-          required: false
+          required: false,
+          include: [
+            {
+              model: BudgetModel,
+              as: 'ChargeAccount',
+              include: [
+                { model: DepartmentModel, as: 'Department' },
+                { model: ChartofAccountsModel, as: 'ChartofAccounts' }
+              ]
+            }
+          ]
         },
         {
           model: Customer,
@@ -510,7 +534,21 @@ exports.update = async (req, res) => {
     const newObligation = await TransactionTable.findOne({
       where: { LinkID: transaction.LinkID },
       include: [
-        { model: TransactionItems, as: 'TransactionItemsAll', required: false },
+        {
+          model: TransactionItems,
+          as: 'TransactionItemsAll',
+          required: false,
+          include: [
+            {
+              model: BudgetModel,
+              as: 'ChargeAccount',
+              include: [
+                { model: DepartmentModel, as: 'Department' },
+                { model: ChartofAccountsModel, as: 'ChartofAccounts' }
+              ]
+            }
+          ]
+        },
         { model: Customer, as: 'Customer', required: false },
         {
           model: EmployeeModel,
@@ -550,25 +588,28 @@ exports.delete = async (req, res) => {
     }
 
     // --- REVERT Budget Pre-Encumbrance ---
-    const items = await TransactionItems.findAll({
-      where: { LinkID: transaction.LinkID },
-      transaction: t
-    });
-
-    if (items.length > 0) {
-      const budgetUpdates = {};
-      items.forEach(item => {
-        const amount = parseFloat(item.AmountDue || item.Sub_Total || 0);
-        if (amount > 0) {
-          budgetUpdates[item.ChargeAccountID] = (budgetUpdates[item.ChargeAccountID] || 0) + amount;
-        }
+    // Only revert if not already rejected (since rejection already reverts it)
+    if (transaction.Status !== 'Rejected') {
+      const items = await TransactionItems.findAll({
+        where: { LinkID: transaction.LinkID },
+        transaction: t
       });
 
-      for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
-        await Budget.decrement(
-          { PreEncumbrance: totalAmount },
-          { where: { ID: chargeAccountId }, transaction: t }
-        );
+      if (items.length > 0) {
+        const budgetUpdates = {};
+        items.forEach(item => {
+          const amount = parseFloat(item.AmountDue || item.Sub_Total || 0);
+          if (amount > 0) {
+            budgetUpdates[item.ChargeAccountID] = (budgetUpdates[item.ChargeAccountID] || 0) + amount;
+          }
+        });
+
+        for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
+          await Budget.decrement(
+            { PreEncumbrance: totalAmount },
+            { where: { ID: chargeAccountId }, transaction: t }
+          );
+        }
       }
     }
 

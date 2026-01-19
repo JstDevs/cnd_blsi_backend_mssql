@@ -976,25 +976,28 @@ exports.delete = async (req, res) => {
     }
 
     // --- REVERT Budget Pre-Encumbrance ---
-    const items = await TransactionItemsModel.findAll({
-      where: { LinkID: trx.LinkID },
-      transaction: t
-    });
-
-    if (items.length > 0) {
-      const budgetUpdates = {};
-      items.forEach(item => {
-        const amount = parseFloat(item.AmountDue || item.Sub_Total || 0);
-        if (amount > 0) {
-          budgetUpdates[item.ChargeAccountID] = (budgetUpdates[item.ChargeAccountID] || 0) + amount;
-        }
+    // Only revert if not already rejected
+    if (trx.Status !== 'Rejected') {
+      const items = await TransactionItemsModel.findAll({
+        where: { LinkID: trx.LinkID },
+        transaction: t
       });
 
-      for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
-        await BudgetModel.decrement(
-          { PreEncumbrance: totalAmount },
-          { where: { ID: chargeAccountId }, transaction: t }
-        );
+      if (items.length > 0) {
+        const budgetUpdates = {};
+        items.forEach(item => {
+          const amount = parseFloat(item.AmountDue || item.Sub_Total || 0);
+          if (amount > 0) {
+            budgetUpdates[item.ChargeAccountID] = (budgetUpdates[item.ChargeAccountID] || 0) + amount;
+          }
+        });
+
+        for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
+          await BudgetModel.decrement(
+            { PreEncumbrance: totalAmount },
+            { where: { ID: chargeAccountId }, transaction: t }
+          );
+        }
       }
     }
 

@@ -778,27 +778,23 @@ exports.approveTransaction = async (req, res) => {
         for (const row of transactionItems) {
           const chargeId = row.ChargeAccountID;
           const subTotal = parseFloat(row.AmountDue || row.Sub_Total || 0);
-          chargeAccountSums[chargeId] = Number(chargeAccountSums[chargeId] || 0) + subTotal;
+          if (subTotal > 0) {
+            if (!chargeAccountSums[chargeId]) {
+              chargeAccountSums[chargeId] = { pre: 0, enc: 0 };
+            }
+            chargeAccountSums[chargeId].pre += subTotal;
+            chargeAccountSums[chargeId].enc += subTotal;
+          }
         }
 
-        // Consolidate updates: Update PreEncumbrance and Encumbrance together
-        for (const chargeId of Object.keys(chargeAccountSums)) {
-          const budget = await BudgetModel.findByPk(chargeId, { transaction: t });
-          if (!budget) continue;
-
-          const transferAmount = Number(chargeAccountSums[chargeId] || 0);
-          const currentPreEnc = Number(budget.PreEncumbrance || 0);
-          const currentEnc = Number(budget.Encumbrance || 0);
-
-          const updatedPreEnc = currentPreEnc - transferAmount;
-          const updatedEnc = currentEnc + transferAmount;
-
-          await budget.update(
+        // Consolidate updates: Update PreEncumbrance and Encumbrance together using literals
+        for (const [chargeId, updates] of Object.entries(chargeAccountSums)) {
+          await BudgetModel.update(
             {
-              PreEncumbrance: updatedPreEnc < 0 ? 0 : updatedPreEnc,
-              Encumbrance: updatedEnc < 0 ? 0 : updatedEnc
+              PreEncumbrance: literal(`GREATEST(0, CAST(PreEncumbrance AS DECIMAL(18,2)) - ${updates.pre})`),
+              Encumbrance: literal(`CAST(Encumbrance AS DECIMAL(18,2)) + ${updates.enc}`)
             },
-            { transaction: t }
+            { where: { ID: chargeId }, transaction: t }
           );
         }
       }

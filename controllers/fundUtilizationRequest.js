@@ -782,7 +782,17 @@ exports.getAll = async (req, res) => {
         {
           model: TransactionItemsModel,
           as: 'TransactionItemsAll',
-          required: false
+          required: false,
+          include: [
+            {
+              model: BudgetModel,
+              as: 'ChargeAccount',
+              include: [
+                { model: DepartmentModel, as: 'Department' },
+                { model: ChartofAccountsModel, as: 'ChartofAccounts' }
+              ]
+            }
+          ]
         },
         {
           model: CustomerModel,

@@ -96,6 +96,16 @@ async function saveCustomerAndCTC(req, res) {
     // if(!documentTypeRecord) {
     //   return res.status(404).json({ success: false, message: 'Document type not found' });
     // }
+          
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: docID,
+        Active: 1,
+      },
+      transaction: t
+    });
+    statusValue = matrixExists ? 'Requested' : 'Posted';    
 
     const latestapprovalversion=await getLatestApprovalVersion('Community Tax');
 
@@ -114,7 +124,7 @@ async function saveCustomerAndCTC(req, res) {
         Total: data.Total,
         AmountReceived: data.AmountPaid,
         Remarks: data.Remarks,
-        Status: 'Requested',
+        Status: statusValue,
         Active: true,
         CreatedBy: req.user.id,
         CreatedDate: new Date(),

@@ -101,6 +101,17 @@ exports.save = async (req, res) => {
       }, { where: { ID: data.CustomerID }, transaction: t });
       customerId = data.CustomerID;
     }
+              
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: docID,
+        Active: 1,
+      },
+      transaction: t
+    });
+    statusValue = matrixExists ? 'Requested' : 'Posted';    
+    
 
     const latestapprovalversion = await getLatestApprovalVersion('Community Tax');
 
@@ -119,7 +130,7 @@ exports.save = async (req, res) => {
         Total: data.Total,
         AmountReceived: data.AmountPaid,
         Remarks: data.Remarks,
-        Status: 'Requested',
+        Status: statusValue,
         Active: true,
         CreatedBy: req.user.id,
         CreatedDate: new Date(),

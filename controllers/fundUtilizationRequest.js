@@ -24,6 +24,7 @@ const generateLinkID = require("../utils/generateID")
 const db = require('../config/database')
 const { Op, literal } = require('sequelize');
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
+const validateApproval = require('../utils/validateApproval');
 
 async function getCurrentNumber(transaction) {
   let currentNumber = 1;
@@ -858,24 +859,38 @@ exports.approveTransaction = async (req, res) => {
     if (!transaction) throw new Error("Transaction not found");
     if (transaction.Status === 'Void') throw new Error("Cannot approve a Voided transaction.");
 
+    // 🔹 1. Validate Approval Matrix
+    const validation = await validateApproval({
+      documentTypeID: transaction.DocumentTypeID || 31, // 31 is FURS
+      approvalVersion: transaction.ApprovalVersion,
+      totalAmount: parseFloat(transaction.Total || 0),
+      transactionLinkID: transaction.LinkID,
+      user: req.user
+    });
+
+    if (!validation.canApprove) {
+      await t.rollback();
+      return res.status(403).json({ success: false, error: validation.error });
+    }
+
+    const isFinal = validation.isFinal;
     const alreadyPosted = transaction.Status === "Posted";
     const now = new Date();
     let newInvoiceNumber = transaction.InvoiceNumber;
     let currentNumber = null;
 
-    if (!alreadyPosted) {
+    if (isFinal && !alreadyPosted) {
       currentNumber = await getCurrentNumber(t);
       newInvoiceNumber = `${FundsID}-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${currentNumber}`;
     }
 
-    let newStatus = transaction.Status;
-    if (!alreadyPosted) {
-      newStatus = (Number(ApprovalProgress) >= Number(NumberOfApproverPerSequence)) ? "Posted" : "Requested";
-    }
+    await transaction.update({
+      ApprovalProgress: validation.nextSequence || transaction.ApprovalProgress,
+      Status: isFinal ? 'Posted' : validation.nextStatus,
+      InvoiceNumber: newInvoiceNumber
+    }, { transaction: t });
 
-    await transaction.update({ ApprovalProgress, Status: newStatus, InvoiceNumber: newInvoiceNumber }, { transaction: t });
-
-    if (newStatus === "Posted" && !alreadyPosted) {
+    if (isFinal && !alreadyPosted) {
       // Logic to move PreEncumbrance to Encumbrance in Budget
       const items = await TransactionItemsModel.findAll({ where: { LinkID: transaction.LinkID }, transaction: t });
 
@@ -903,21 +918,22 @@ exports.approveTransaction = async (req, res) => {
     }
 
     await ApprovalAudit.create({
-      LinkID: ApprovalLinkID,
+      LinkID: generateLinkID(),
       InvoiceLink: transaction.LinkID,
-      PositionEmployeeID: req.user.employeeID,
-      SequenceOrder: ApprovalOrder,
+      PositionorEmployeeID: req.user.employeeID,
+      SequenceOrder: validation.currentSequence,
       ApprovalDate: now,
       CreatedBy: req.user.id,
       CreatedDate: now,
-      ApprovalVersion
+      ApprovalVersion: transaction.ApprovalVersion
     }, { transaction: t });
 
     await t.commit();
-    res.json({ success: true, message: "Approved successfully" });
+    res.json({ success: true, message: "Transaction approved successfully." });
   } catch (err) {
+    console.error('Approve FURS error:', err);
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 

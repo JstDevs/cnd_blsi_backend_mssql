@@ -12,6 +12,7 @@ const TaxCodeModel = require('../config/database').taxCode;
 const db = require('../config/database')
 const generateLinkID = require("../utils/generateID")
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
+const validateApproval = require('../utils/validateApproval');
 const { hasAccess } = require('../utils/checkUserAccess');
 const { Op, literal } = require('sequelize');
 
@@ -78,7 +79,7 @@ exports.create = async (req, res) => {
       },
       transaction: t
     });
-    
+
     statusValue = matrixExists ? 'Requested' : 'Posted';
     const latestApprovalVersion = await getLatestApprovalVersion('Obligation Request');
 
@@ -573,9 +574,9 @@ exports.update = async (req, res) => {
     });
     res.json(newObligation);
   } catch (err) {
-    console.error('Update obligation error:', err);
+    console.error('Approve obligation error:', err);
     await t.rollback();
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
@@ -732,43 +733,49 @@ exports.approveTransaction = async (req, res) => {
     // If already posted, we should only update the approval audit but skip budget/status changes
     const alreadyPosted = transaction.Status === "Posted";
 
-    // 🔹 1. Generate Invoice Number (only if not already posted)
+    // 🔹 1. Validate Approval Matrix
+    const validation = await validateApproval({
+      documentTypeID: transaction.DocumentTypeID || 13, // 13 is OBR
+      approvalVersion: transaction.ApprovalVersion,
+      totalAmount: parseFloat(transaction.Total || 0),
+      transactionLinkID: transaction.LinkID,
+      user: req.user
+    });
+
+    if (!validation.canApprove) {
+      await t.rollback();
+      return res.status(403).json({ success: false, error: validation.error });
+    }
+
+    const isFinal = validation.isFinal;
+
+    // 🔹 2. Generate Invoice Number (only if not already posted and isFinal)
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0"); // 0-based → +1
+    const month = String(now.getMonth() + 1).padStart(2, "0");
     const currentYYMM = `${year}-${month}`;
 
     let newInvoiceNumber = transaction.InvoiceNumber;
     let currentNumber = null;
 
-    if (!alreadyPosted) {
+    if (isFinal && !alreadyPosted) {
       currentNumber = await getCurrentNumber(t);
       newInvoiceNumber = `${FundsID}-${currentYYMM}-${currentNumber}`;
     }
 
-    // 🔹 2. Handle Approve / Post logic
-    let newStatus = transaction.Status;
-    if (!alreadyPosted) {
-      newStatus = "Requested";
-      if (numberofApproverperSequence) {
-        if (approvalProgress >= numberofApproverperSequence) newStatus = "Posted";
-      } else {
-        if ((approvalProgress || 0) > 0) newStatus = "Posted";
-      }
-    }
-
     const updatePayload = {
-      ApprovalProgress: approvalProgress,
-      Status: newStatus
+      ApprovalProgress: validation.nextSequence || transaction.ApprovalProgress,
+      Status: isFinal ? 'Posted' : validation.nextStatus
     };
 
-    if (newStatus === "Posted" && !alreadyPosted) {
+    if (isFinal && !alreadyPosted) {
       updatePayload.InvoiceNumber = newInvoiceNumber;
     }
 
+
     await TransactionTable.update(updatePayload, { where: { ID: transactionId }, transaction: t });
 
-    if (newStatus === "Posted" && !alreadyPosted) {
+    if (isFinal && !alreadyPosted) {
       const fund = await FundsModel.findByPk(FundsID, { transaction: t });
       if (!fund) {
         throw new Error(`Fund with ID ${FundsID} not found`);
@@ -829,18 +836,18 @@ exports.approveTransaction = async (req, res) => {
     // 🔹 5. Insert into Approval Audit
     await ApprovalAudit.create(
       {
-        LinkID: varApprovalLink,
-        InvoiceLink: varLinkID,
-        PositionEmployee: "Employee",
-        PositionEmployeeID: req.user.employeeID,
-        SequenceOrder: approvalOrder,
-        ApprovalOrder: numberofApproverperSequence,
+        LinkID: generateLinkID(),
+        InvoiceLink: transaction.LinkID,
+        PositionorEmployee: "Employee",
+        PositionorEmployeeID: req.user.employeeID,
+        SequenceOrder: validation.currentSequence,
+        ApprovalOrder: validation.numberOfApprovers,
         ApprovalDate: now,
         RejectionDate: null,
         Remarks: null,
         CreatedBy: req.user.id,
         CreatedDate: now,
-        ApprovalVersion: varTransactionApprovalVersion
+        ApprovalVersion: transaction.ApprovalVersion
       },
       { transaction: t }
     );

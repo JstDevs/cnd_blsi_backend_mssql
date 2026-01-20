@@ -396,7 +396,8 @@ exports.approveTransaction = async (req, res) => {
     });
 
     if (!validation.canApprove) {
-      throw new Error(validation.error);
+      await t.rollback();
+      return res.status(403).json({ success: false, error: validation.error });
     }
 
     const isFinal = validation.isFinal;

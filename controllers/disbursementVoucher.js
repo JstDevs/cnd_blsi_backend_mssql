@@ -18,6 +18,7 @@ const ApprovalAuditModel = require('../config/database').ApprovalAudit;
 const { Op, where } = require('sequelize');
 const db = require('../config/database')
 const generateLinkID = require("../utils/generateID")
+const validateApproval = require('../utils/validateApproval');
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 
 
@@ -334,7 +335,7 @@ exports.save = async (req, res) => {
       },
       transaction: t
     });
-    
+
     statusValue = matrixExists ? 'Requested' : 'Posted';
 
     let communityData = {
@@ -491,7 +492,7 @@ exports.save = async (req, res) => {
       },
       transaction: t
     });
-    
+
     statusValueOBR = matrixExistsOBR ? 'Posted, Disbursement Pending' : 'Posted, Disbursement Posted';
 
     // Update Obligation Status
@@ -930,70 +931,86 @@ exports.approve = async (req, res) => {
 
     if (!trx) throw new Error('Transaction not found');
 
-    if (trx.Status && trx.Status.includes('Posted')) {
+    // 🔹 1. Validate Approval Matrix
+    const validation = await validateApproval({
+      documentTypeID: trx.DocumentTypeID || 14, // 14 for DV
+      approvalVersion: trx.ApprovalVersion,
+      totalAmount: parseFloat(trx.Total || 0),
+      transactionLinkID: trx.LinkID,
+      user: req.user
+    });
+
+    if (!validation.canApprove) {
       await t.rollback();
-      return res.json({ message: 'Transaction already posted.' });
+      return res.status(403).json({ success: false, error: validation.error });
     }
 
+    const isFinal = validation.isFinal;
+    const alreadyPosted = trx.Status && trx.Status.includes('Posted');
     const fundCode = trx.Funds?.Code;
-    const approvalProgress = Number(trx.ApprovalProgress) || 0;
     const varLinkID = trx.LinkID;
-    const dtItemList = trx.TransactionItemsAll || []; // Use updated alias
+    const dtItemList = trx.TransactionItemsAll || [];
     const dtGeneralLedgerDV = trx.GeneralLedger || [];
 
-    console.log(`[DV Approve] Processing ID: ${id}, LinkID: ${varLinkID}`);
-    console.log(`[DV Approve] Found ${dtItemList.length} items in TransactionItemsAll`);
+    console.log(`[DV Approve] Processing ID: ${id}, LinkID: ${varLinkID}, isFinal: ${isFinal}`);
 
     // 2. Generate new invoice number (e.g., 200-202508-0012)
-    const docType = await DocumentTypeModel.findOne({ where: { ID: 14 }, transaction: t });
-    const currentNumber = parseInt(docType.CurrentNumber || 0) + 1;
-    const currentYYMM = new Date().toISOString().slice(0, 7).replace('-', '');
-    const newInvoiceNumber = `${fundCode}-${currentYYMM}-${currentNumber.toString().padStart(4, '0')}`;
+    let newInvoiceNumber = trx.InvoiceNumber;
+    let currentNumber = null;
 
-    // 3. Validate Budget (simplified)
-    const chargeAccountSums = {};
-    for (const item of dtItemList) {
-      const acctId = item.ChargeAccountID;
-      const debit = parseFloat(item.Debit || 0);
-      const credit = parseFloat(item.Credit || 0);
-      const subtotal = debit > 0 ? debit : -credit;
-
-      console.log(`[DV Approve] Item: ChargeAccountID=${acctId}, Subtotal=${subtotal}`);
-      chargeAccountSums[acctId] = (chargeAccountSums[acctId] || 0) + subtotal;
+    if (isFinal && !alreadyPosted) {
+      const docType = await DocumentTypeModel.findOne({ where: { ID: 14 }, transaction: t });
+      currentNumber = parseInt(docType.CurrentNumber || 0) + 1;
+      const currentYYMM = new Date().toISOString().slice(0, 7).replace('-', '');
+      newInvoiceNumber = `${fundCode}-${currentYYMM}-${currentNumber.toString().padStart(4, '0')}`;
     }
 
-    for (const acctId of Object.keys(chargeAccountSums)) {
-      const budget = await BudgetModel.findOne({ where: { ID: acctId }, transaction: t });
-      const requiredAmount = chargeAccountSums[acctId];
+    if (isFinal && !alreadyPosted) {
+      // 3. Validate Budget (simplified)
+      const chargeAccountSums = {};
+      for (const item of dtItemList) {
+        const acctId = item.ChargeAccountID;
+        const debit = parseFloat(item.Debit || 0);
+        const credit = parseFloat(item.Credit || 0);
+        const subtotal = debit > 0 ? debit : -credit;
 
-      if (!budget) {
-        console.error(`[DV Approve] Budget record not found for ID: ${acctId}`);
-        throw new Error(`Budget record not found for account ${acctId}`);
+        console.log(`[DV Approve] Item: ChargeAccountID=${acctId}, Subtotal=${subtotal}`);
+        chargeAccountSums[acctId] = (chargeAccountSums[acctId] || 0) + subtotal;
       }
 
-      console.log(`[DV Approve] Budget ID ${acctId} BEFORE update: AllotmentBalance=${budget.AllotmentBalance}, Encumbrance=${budget.Encumbrance}, Charges=${budget.Charges}`);
+      for (const acctId of Object.keys(chargeAccountSums)) {
+        const budget = await BudgetModel.findOne({ where: { ID: acctId }, transaction: t });
+        const requiredAmount = chargeAccountSums[acctId];
 
-      if (budget.AllotmentBalance < requiredAmount) {
-        throw new Error(`Insufficient budget for account ${acctId}`);
+        if (!budget) {
+          console.error(`[DV Approve] Budget record not found for ID: ${acctId}`);
+          throw new Error(`Budget record not found for account ${acctId}`);
+        }
+
+        console.log(`[DV Approve] Budget ID ${acctId} BEFORE update: AllotmentBalance=${budget.AllotmentBalance}, Encumbrance=${budget.Encumbrance}, Charges=${budget.Charges}`);
+
+        if (budget.AllotmentBalance < requiredAmount) {
+          throw new Error(`Insufficient budget for account ${acctId}`);
+        }
+
+        // Update budget values
+        await budget.update({
+          Encumbrance: parseFloat(budget.Encumbrance || 0) - requiredAmount,
+          AllotmentBalance: parseFloat(budget.AllotmentBalance || 0) - requiredAmount,
+          Charges: parseFloat(budget.Charges || 0) + requiredAmount
+        }, { transaction: t });
+
+        console.log(`[DV Approve] Budget ID ${acctId} AFTER update: Deducted ${requiredAmount} from Encumbrance & AllotmentBalance, Added to Charges`);
       }
-
-      // Update budget values
-      await budget.update({
-        Encumbrance: parseFloat(budget.Encumbrance || 0) - requiredAmount,
-        AllotmentBalance: parseFloat(budget.AllotmentBalance || 0) - requiredAmount,
-        Charges: parseFloat(budget.Charges || 0) + requiredAmount
-      }, { transaction: t });
-
-      console.log(`[DV Approve] Budget ID ${acctId} AFTER update: Deducted ${requiredAmount} from Encumbrance & AllotmentBalance, Added to Charges`);
     }
 
     // 4. Update Transaction Table
     await trx.update({
-      ApprovalProgress: approvalProgress + 1,
+      ApprovalProgress: validation.nextSequence || trx.ApprovalProgress,
       InvoiceNumber: newInvoiceNumber,
-      Status: fundCode === '200' || fundCode === '300'
-        ? 'Posted, Cheque Pending'
-        : 'Posted'
+      Status: isFinal
+        ? (fundCode === '200' || fundCode === '300' ? 'Posted, Cheque Pending' : 'Posted')
+        : validation.nextStatus
     }, { transaction: t });
 
     // 5. Insert General Ledger
@@ -1020,35 +1037,38 @@ exports.approve = async (req, res) => {
     );
 
     // 7. Update Document Type Number
-    await docType.update({ CurrentNumber: currentNumber }, { transaction: t });
+    if (currentNumber && isFinal) {
+      const docType = await DocumentTypeModel.findOne({ where: { ID: 14 }, transaction: t });
+      if (docType) {
+        await docType.update({ CurrentNumber: currentNumber }, { transaction: t });
+      }
+    }
 
     // 8. Insert into Approval Audit
     await ApprovalAuditModel.create({
-      LinkID: trx.LinkID,
+      LinkID: generateLinkID(),
       InvoiceLink: trx.LinkID,
       PositionorEmployee: "Employee",
       PositionorEmployeeID: req.user.employeeID,
-      SequenceOrder: approvalProgress,
-      ApprovalOrder: 0, // adjust as needed
+      SequenceOrder: validation.currentSequence,
+      ApprovalOrder: validation.numberOfApprovers,
       ApprovalDate: new Date(),
-      CreatedBy: trx.CreatedBy,
+      CreatedBy: req.user.id,
       CreatedDate: new Date(),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 
     // 9. Update OBR Status if linked
-    if (trx.ObligationRequestNumber) {
+    if (isFinal && trx.ObligationRequestNumber) {
       await TransactionTableModel.update(
         { Status: "Posted, Disbursement Posted" },
         {
           where: {
             InvoiceNumber: trx.ObligationRequestNumber,
-            APAR: {
-              [Op.or]: [
-                { [Op.like]: "Obligation Request%" },
-                { [Op.like]: "Fund Utilization Request%" }
-              ]
-            }
+            [Op.or]: [
+              { DocumentTypeID: 13 }, // OBR
+              { DocumentTypeID: 31 }  // FURS
+            ]
           },
           transaction: t
         }
@@ -1056,13 +1076,13 @@ exports.approve = async (req, res) => {
     }
 
     await t.commit();
-    res.json({ message: "Approved successfully" });
+    res.json({ success: true, message: "Transaction approved successfully." });
   } catch (err) {
-    await t.rollback();
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    console.error('[DV Approve] Error:', err);
+    if (t) await t.rollback();
+    res.status(500).json({ success: false, error: err.message });
   }
-}
+};
 
 exports.reject = async (req, res) => {
   const { ID } = req.body; // only send ID from frontend

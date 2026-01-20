@@ -96,11 +96,21 @@ async function saveTransaction(req, res) {
       throw new Error('Document type not found or inactive');
     }
     const invoiceNumber = Number(documentTypeRecord.CurrentNumber) + 1;
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: docID,
+        Active: 1,
+      },
+      transaction: t
+    });
+
+    statusValue = matrixExists ? 'Requested' : 'Posted';
 
     if (IsNew) {
       await TransactionTable.create({
         LinkID,
-        Status: 'Requested',
+        Status: statusValue,
         APAR: 'Official Receipt',
         DocumentTypeID: docID,
         RequestedBy: req.user.employeeID,
@@ -144,7 +154,7 @@ async function saveTransaction(req, res) {
       );
     } else {
       await TransactionTable.update({
-        Status: 'Requested',
+        Status: statusValue,
         APAR: 'Official Receipt',
         DocumentTypeID: docID,
         RequestedBy: req.user.employeeID,

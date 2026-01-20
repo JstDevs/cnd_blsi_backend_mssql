@@ -21,6 +21,16 @@ exports.save = async (req, res) => {
 
     const refID = IsNew ? generateLinkID() : data.LinkID;
     const docID = 30;
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: docID,
+        Active: 1,
+      },
+      transaction: t
+    });
+    
+    statusValue = matrixExists ? 'Requested' : 'Posted';
 
     if (IsNew) {
       // INSERT PublicMarketTicketing
@@ -42,7 +52,7 @@ exports.save = async (req, res) => {
       // INSERT TransactionTable
       await TransactionTable.create({
         LinkID: refID,
-        Status: 'Requested',
+        Status: statusValue,
         APAR: 'Public Market Ticketing',
         DocumentTypeID: docID,
         InvoiceDate: new Date(),

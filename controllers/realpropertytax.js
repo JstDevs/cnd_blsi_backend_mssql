@@ -77,9 +77,20 @@ exports.save = async (req, res) => {
       throw new Error('Invalid value for IsNew. Expected true or false.');
     }
 
+    const docID = 11;
     const refID = IsNew ? generateLinkID() : data.LinkID;
     // const latestapprovalversion=await getLatestApprovalVersion('Real Property Tax');
 
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: docID,
+        Active: 1,
+      },
+      transaction: t
+    });
+
+    statusValue = matrixExists ? 'Requested' : 'Posted';
 
     if (IsNew) {
       // Insert into TransactionTable
@@ -87,7 +98,8 @@ exports.save = async (req, res) => {
         CustomerName: data.CustomerName,
         Municipality: data.Municipality,
         LinkID: refID,
-        Status: 'Requested',
+        DocumentTypeID: docID,
+        Status: statusValue,
         APAR: 'RPT',
         PreviousPayment: 0,
         AmountinWords: data.AmountinWords,
@@ -173,7 +185,8 @@ exports.save = async (req, res) => {
         CustomerName: data.CustomerName,
         Municipality: data.Municipality,
         LinkID: refID,
-        Status: 'Requested',
+        DocumentTypeID: docID,
+        Status: statusValue,
         APAR: 'RPT',
         PreviousPayment: 0,
         AmountinWords: data.AmountinWords,
@@ -485,7 +498,7 @@ exports.void = async (req, res) => {
     }
     // Update Status to Voided
     await TransactionTable.update(
-      { Status: "Voided" },
+      { Status: "Void" },
       { where: { ID: id }, transaction: t }
     );
 

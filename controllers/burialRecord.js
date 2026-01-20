@@ -54,7 +54,16 @@ exports.saveBurialTransaction = async (req, res) => {
     }
 
     const docID = 18;
-
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: docID,
+        Active: 1,
+      },
+      transaction: t
+    });
+    
+        statusValue = matrixExists ? 'Requested' : 'Posted';
     const refID = IsNew ? generateLinkID() : data.LinkID;
     const latestapprovalversion = await getLatestApprovalVersion('Burial Receipt');
 
@@ -73,7 +82,7 @@ exports.saveBurialTransaction = async (req, res) => {
         Total: data.Total,
         PaymentType: data.PaymentTypeID,
         Remarks: data.Remarks,
-        Status: 'Requested',
+        Status: statusValue,
         Active: 1,
         CreatedBy: req.user.id,
         CreatedDate: new Date(),
@@ -129,7 +138,7 @@ exports.saveBurialTransaction = async (req, res) => {
         Total: data.Total,
         PaymentType: data.PaymentTypeID,
         Remarks: data.Remarks,
-        Status: 'Requested',
+        Status: statusValue,
         Active: 1,
         CreatedBy: req.user.id,
         CreatedDate: new Date(),

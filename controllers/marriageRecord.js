@@ -55,6 +55,16 @@ exports.saveTransaction = async (req, res) => {
     }
 
     const docID = 19;
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: docID,
+        Active: 1,
+      },
+      transaction: t
+    });
+    
+    statusValue = matrixExists ? 'Requested' : 'Posted';
 
     const refID = IsNew ? generateLinkID() : data.LinkID;
     const latestapprovalversion = await getLatestApprovalVersion('Marriage Receipt');
@@ -73,7 +83,7 @@ exports.saveTransaction = async (req, res) => {
         Total: data.Total,
         PaymentType: 'test',
         Remarks: data.Remarks,
-        Status: 'Requested',
+        Status: statusValue,
         Active: 1,
         CreatedBy: req.user.id,
         CreatedDate: new Date(),
@@ -124,7 +134,7 @@ exports.saveTransaction = async (req, res) => {
         Total: data.Total,
         PaymentType: 'test',
         Remarks: data.Remarks,
-        Status: 'Requested',
+        Status: statusValue,
         Active: 1,
         CreatedBy: req.user.id,
         CreatedDate: new Date(),

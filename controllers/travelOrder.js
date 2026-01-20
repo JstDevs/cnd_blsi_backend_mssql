@@ -8,8 +8,8 @@ const DepartmentModel = require('../config/database').department;
 const DocumentTypeModel = require('../config/database').documentType;
 const travelOrder = TravelOrder;
 
-const {getAllWithAssociations}=require("../models/associatedDependency");
-const db=require('../config/database')
+const { getAllWithAssociations } = require("../models/associatedDependency");
+const db = require('../config/database')
 const { Op } = require('sequelize');
 
 const generateLinkID = require("../utils/generateID")
@@ -159,7 +159,7 @@ exports.create = async (req, res) => {
       }));
       await TravelDocumentsModel.bulkCreate(docData, { transaction: t });
     }
-    
+
     if (req.files && req.files.length > 0) {
       const blobAttachments = req.files.map((file) => ({
         LinkID,
@@ -264,7 +264,7 @@ exports.getAll = async (req, res) => {
 
     const formattedItems = items.map((item) => {
       const json = item.toJSON();
-      
+
       json.TransactionStatus = json.Transaction?.Status || null;
       delete json.Transaction;
 
@@ -315,7 +315,7 @@ exports.update = async (req, res) => {
 
   try {
     const parsedFields = {};
-    
+
     // Reconstruct Attachments array from fields like Attachments[0].ID starts
     const attachments = [];
     for (const key in req.body) {
@@ -424,7 +424,7 @@ exports.update = async (req, res) => {
     }
 
 
-    
+
     // Attachment handling
     const existingIDs = Attachments.filter(att => att.ID).map(att => att.ID);
 
@@ -523,3 +523,146 @@ exports.delete = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.approveTransaction = async (req, res) => {
+  const t = await db.sequelize.transaction();
+
+  try {
+    const { ID } = req.body;
+
+    if (!ID) {
+      await t.rollback();
+      return res.status(400).json({ error: 'Travel Order ID is required' });
+    }
+
+    // Find the travel order by ID
+    const travelOrderItem = await travelOrder.findByPk(ID, { transaction: t });
+    if (!travelOrderItem) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Travel Order not found' });
+    }
+
+    const linkID = travelOrderItem.LinkID;
+
+    // Find the transaction record
+    const transactionRecord = await TransactionTableModel.findOne({
+      where: { LinkID: linkID },
+      transaction: t
+    });
+
+    if (!transactionRecord) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Transaction record not found' });
+    }
+
+    if (transactionRecord.Status === 'Void') {
+      await t.rollback();
+      return res.status(400).json({ error: 'Cannot approve a voided travel order' });
+    }
+
+    if (transactionRecord.Status === 'Approved' || transactionRecord.Status === 'Posted') {
+      await t.rollback();
+      return res.status(400).json({ error: 'Travel order is already approved' });
+    }
+
+    // Update status to Approved
+    await transactionRecord.update({
+      Status: 'Approved',
+      ModifyBy: req.user.id,
+      ModifyDate: new Date()
+    }, { transaction: t });
+
+    // Log the approval in ApprovalAudit
+    const ApprovalAuditModel = require('../config/database').ApprovalAudit;
+    await ApprovalAuditModel.create({
+      LinkID: generateLinkID(),
+      InvoiceLink: linkID,
+      PositionEmployee: 'Employee',
+      PositionEmployeeID: req.user.employeeID,
+      ApprovalDate: new Date(),
+      Remarks: 'Travel Order Approved',
+      CreatedBy: req.user.id,
+      CreatedDate: new Date(),
+      ApprovalVersion: transactionRecord.ApprovalVersion
+    }, { transaction: t });
+
+    await t.commit();
+    res.json({ success: true, message: 'Travel Order approved successfully' });
+
+  } catch (err) {
+    await t.rollback();
+    console.error('❌ Error approving travel order:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.rejectTransaction = async (req, res) => {
+  const t = await db.sequelize.transaction();
+
+  try {
+    const { ID, Reason } = req.body;
+
+    if (!ID) {
+      await t.rollback();
+      return res.status(400).json({ error: 'Travel Order ID is required' });
+    }
+
+    // Find the travel order by ID
+    const travelOrderItem = await travelOrder.findByPk(ID, { transaction: t });
+    if (!travelOrderItem) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Travel Order not found' });
+    }
+
+    const linkID = travelOrderItem.LinkID;
+
+    // Find the transaction record
+    const transactionRecord = await TransactionTableModel.findOne({
+      where: { LinkID: linkID },
+      transaction: t
+    });
+
+    if (!transactionRecord) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Transaction record not found' });
+    }
+
+    if (transactionRecord.Status === 'Void') {
+      await t.rollback();
+      return res.status(400).json({ error: 'Cannot reject a voided travel order' });
+    }
+
+    if (transactionRecord.Status === 'Rejected') {
+      await t.rollback();
+      return res.status(400).json({ error: 'Travel order is already rejected' });
+    }
+
+    // Update status to Rejected
+    await transactionRecord.update({
+      Status: 'Rejected',
+      ModifyBy: req.user.id,
+      ModifyDate: new Date()
+    }, { transaction: t });
+
+    // Log the rejection in ApprovalAudit
+    const ApprovalAuditModel = require('../config/database').ApprovalAudit;
+    await ApprovalAuditModel.create({
+      LinkID: generateLinkID(),
+      InvoiceLink: linkID,
+      RejectionDate: new Date(),
+      Remarks: Reason || 'Travel Order Rejected',
+      CreatedBy: req.user.id,
+      CreatedDate: new Date(),
+      ApprovalVersion: transactionRecord.ApprovalVersion
+    }, { transaction: t });
+
+    await t.commit();
+    res.json({ success: true, message: 'Travel Order rejected successfully' });
+
+  } catch (err) {
+    await t.rollback();
+    console.error('❌ Error rejecting travel order:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+

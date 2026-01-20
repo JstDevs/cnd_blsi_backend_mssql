@@ -10,5 +10,7 @@ router.get('/', requireAuth, controller.getAll);
 router.get('/:id', requireAuth, controller.getById);
 router.put('/:id', requireAuth, uploader.any(), controller.update);
 router.delete('/:id', requireAuth, controller.delete);
+router.post('/approve', requireAuth, controller.approveTransaction);
+router.post('/reject', requireAuth, controller.rejectTransaction);
 
 module.exports = router;

@@ -67,10 +67,10 @@ exports.save = async (req, res) => {
     const paid = parseFloat(data.RemainingBalance) === 0;
 
     let IsNew = '';
-    if((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
+    if ((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
       IsNew = true;
     }
-    else if((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
+    else if ((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
       IsNew = false;
     }
     else {
@@ -79,7 +79,7 @@ exports.save = async (req, res) => {
 
     const refID = IsNew ? generateLinkID() : data.LinkID;
     // const latestapprovalversion=await getLatestApprovalVersion('Real Property Tax');
-    
+
 
     if (IsNew) {
       // Insert into TransactionTable
@@ -262,28 +262,28 @@ exports.save = async (req, res) => {
   }
 };
 
-  exports.list = async (req, res) => {
-    try {
-      const results = await TransactionTable.findAll({
-        where: {
-          APAR: 'RPT'
+exports.list = async (req, res) => {
+  try {
+    const results = await TransactionTable.findAll({
+      where: {
+        APAR: 'RPT'
+      },
+      order: [['CreatedBy', 'DESC']],
+      include: [
+        {
+          model: TransactionProperty,
+          as: 'properties',
+          required: false
         },
-        order: [['CreatedBy', 'DESC']],
-        include: [
-          {
-            model: TransactionProperty,
-            as: 'properties',
-            required: false
-          },
-        ]
-      });
+      ]
+    });
 
-      res.status(200).json(results);
-    } catch (error) {
-      console.error('Error loading:', error);
-      res.status(500).json({ error: error.message || 'Failed to fetch RPT transaction list' });
-    }
-  };
+    res.status(200).json(results);
+  } catch (error) {
+    console.error('Error loading:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch RPT transaction list' });
+  }
+};
 
 // Helper to get rate/name/code from DB
 async function getServiceInvoiceAccountDetails(id) {
@@ -331,7 +331,7 @@ exports.postTransaction = async (req, res) => {
       }
     );
 
-    
+
     // --- Fetch account details ---
     const account5 = await getServiceInvoiceAccountDetails(5); // Special Education Fund
     const account4 = await getServiceInvoiceAccountDetails(4); // General Fund
@@ -463,6 +463,49 @@ exports.rejectTransaction = async (req, res) => {
   } catch (error) {
     await t.rollback();
     console.error("❌ Error rejecting transaction:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+
+exports.void = async (req, res) => {
+  const t = await db.sequelize.transaction();
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "Transaction ID is required" });
+    }
+    // Find Transaction
+    const transaction = await TransactionTable.findOne({ where: { ID: id } });
+
+    if (!transaction) {
+      await t.rollback();
+      return res.status(404).json({ message: "Transaction not found" });
+    }
+    // Update Status to Voided
+    await TransactionTable.update(
+      { Status: "Voided" },
+      { where: { ID: id }, transaction: t }
+    );
+
+    // Log Void action in ApprovalAudit
+    await ApprovalAudit.create(
+      {
+        LinkID: generateLinkID(),
+        InvoiceLink: transaction.LinkID,
+        RejectionDate: new Date(),
+        Remarks: "Real Property Tax Receipt Voided by User",
+        CreatedBy: req.user.id,
+        CreatedDate: new Date(),
+      },
+      { transaction: t }
+    )
+    await t.commit();
+    return res.status(200).json({ message: "Transaction voided Successfully" });
+  } catch (error) {
+    await t.rollback();
+    console.error("Error voiding transaction:", error);
     return res.status(500).json({ message: error.message });
   }
 };

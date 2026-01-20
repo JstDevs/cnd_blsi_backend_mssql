@@ -3,6 +3,7 @@ const router = express.Router();
 const controller = require('../controllers/realpropertytax');
 const requireAuth = require('../middleware/requireAuth');
 
+router.post('/void', requireAuth, controller.void);
 router.post('/save', requireAuth, controller.save);
 router.post('/postTransaction', requireAuth, controller.postTransaction);
 router.post('/rejectTransaction', requireAuth, controller.rejectTransaction);

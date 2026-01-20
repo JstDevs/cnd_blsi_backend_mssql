@@ -98,13 +98,25 @@ exports.create = async (req, res) => {
       return res.status(400).json({ error: "Debit and Credit totals must be equal." });
     }
 
+    const docID = 23;
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: docID,
+        Active: 1,
+      },
+      transaction: t
+    });
+    
+    statusValue = matrixExists ? 'Requested' : 'Posted';
+
     // get approval version
     const approvalVersion = await getLatestApprovalVersion('Journal Entry Voucher');
 
     // Insert into Transaction Table
     const newRecord = await TransactionTableModel.create({
       LinkID,
-      Status: 'Requested',
+      Status: statusValue,
       APAR: 'Journal Entry Voucher',
       DocumentTypeID: 23,
       FundsID,
@@ -418,7 +430,7 @@ exports.update = async (req, res) => {
 
     // Update Transaction Table
     await TransactionTableModel.update({
-      Status: 'Requested',
+      Status: statusValue,
       RequestedBy: req.user.employeeID,
       InvoiceDate,
       Total: totalDebit,

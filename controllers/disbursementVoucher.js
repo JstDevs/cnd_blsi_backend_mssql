@@ -326,6 +326,17 @@ exports.save = async (req, res) => {
       }
     }
 
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: documentTypeID,
+        Active: 1,
+      },
+      transaction: t
+    });
+    
+    statusValue = matrixExists ? 'Requested' : 'Posted';
+
     let communityData = {
       DocumentTypeID: documentTypeID,
       LinkID: refID,
@@ -340,7 +351,7 @@ exports.save = async (req, res) => {
       CheckNumber: data.CheckNumber,
       ReceivedPaymentBy: data.ReceivedPaymentBy,
       RequestedBy: req.user.employeeID,
-      Status: 'Requested',
+      Status: statusValue,
       Active: 1,
       Credit: data.Total,
       Debit: data.Total,
@@ -472,11 +483,21 @@ exports.save = async (req, res) => {
       await AttachmentModel.bulkCreate(newAttachments, { transaction: t });
     }
 
+    let statusValueOBR = '';
+    const matrixExistsOBR = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: documentTypeID,
+        Active: 1,
+      },
+      transaction: t
+    });
+    
+    statusValueOBR = matrixExistsOBR ? 'Posted, Disbursement Pending' : 'Posted, Disbursement Posted';
 
     // Update Obligation Status
     if (!IsStandaloneRequest) {
       await TransactionTableModel.update(
-        { Status: 'Posted, Disbursement Pending' },
+        { Status: statusValueOBR },
         { where: { LinkID: data.OBR_LinkID }, transaction: t }
       );
     }

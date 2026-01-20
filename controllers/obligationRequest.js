@@ -69,11 +69,21 @@ exports.create = async (req, res) => {
 
       customerID = newCustomer.ID;
     }
-
+    const docID = 13;
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: docID,
+        Active: 1,
+      },
+      transaction: t
+    });
+    
+    statusValue = matrixExists ? 'Requested' : 'Posted';
     const latestApprovalVersion = await getLatestApprovalVersion('Obligation Request');
 
     const newRecord = await TransactionTable.create({
-      DocumentTypeID: 13,
+      DocumentTypeID: docID,
       LinkID,
       APAR: 'Obligation Request',
       VendorID,
@@ -82,7 +92,7 @@ exports.create = async (req, res) => {
       ResponsibilityCenter,
       Total,
       RequestedBy: req.user.employeeID,
-      Status: 'Requested',
+      Status: statusValue,
       Active: true,
       CreatedBy: req.user.id,
       Credit: Total,

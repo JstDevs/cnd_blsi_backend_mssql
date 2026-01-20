@@ -77,9 +77,20 @@ exports.save = async (req, res) => {
     const userID = req.user.id;
     const approvalVersion = await getLatestApprovalVersion('Check');
 
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+      where: {
+        DocumentTypeID: 25,
+        Active: 1,
+      },
+      transaction: t
+    });
+
+    statusValue = matrixExists ? 'Requested' : 'Posted';
+
     if (IsNew) {
       await CheckModel.create({
-        Status: 'Requested',
+        Status: statusValue,
         LinkID: refID,
         DisbursementID: data.DisbursementID,
         BankID: data.BankID,
@@ -125,7 +136,7 @@ exports.save = async (req, res) => {
       }
     } else {
       await CheckModel.update({
-        Status: 'Requested',
+        Status: statusValue,
         DisbursementID: data.DisbursementID,
         BankID: data.BankID,
         SignatoryType: data.SignatoryType,

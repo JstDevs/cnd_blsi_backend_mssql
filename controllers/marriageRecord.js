@@ -87,6 +87,25 @@ exports.saveTransaction = async (req, res) => {
       }
     }
 
+
+     // ---------------- Create New Spouse if needed ----------------
+     if (IsNew && !data.MarytoID && data.MarrytoName) { 
+      try {
+         console.log('Creating New Spouse:', data.MarrytoName);
+         const newSpouse = await Customer.create({
+            Name: data.MarrytoName,
+            Active: true,
+            CreatedBy: req.user.id,
+            CreatedDate: new Date(),
+            ModifyBy: req.user.id,
+            ModifyDate: new Date()
+         }, { transaction: t });
+         data.MarytoID = newSpouse.ID; // Update the ID variable you use for creating the record
+      } catch (err) {
+         console.error('Error creating spouse:', err);
+      }
+    }
+
     if (IsNew) {
       // Create Transaction Table record
       await TransactionTable.create({

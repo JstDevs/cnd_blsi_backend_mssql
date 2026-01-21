@@ -2,7 +2,7 @@
 
 const { Sequelize, Op } = require('sequelize');
 const db = require('../config/database');
-const { sequelize, TransactionTable, MarriageRecord, Attachment, documentType, TransactionItems, ApprovalAudit } = require('../config/database');
+const { sequelize, TransactionTable, MarriageRecord, Attachment, documentType, TransactionItems, ApprovalAudit, Customer, vendor } = require('../config/database');
 const generateLinkID = require("../utils/generateID")
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 
@@ -36,7 +36,7 @@ async function saveTransaction(req, res) {
       }
     }
 
-    const {
+    let {
       InvoiceDate,
       CustomerID,
       CustomerName,
@@ -58,6 +58,8 @@ async function saveTransaction(req, res) {
       Attachments = [],
     } = parsedFields;
 
+    const { PayorType } = parsedFields;
+
     let {
       IsNew,
       LinkID,
@@ -77,6 +79,41 @@ async function saveTransaction(req, res) {
     else {
       throw new Error('Invalid value for IsNew. Expected true or false.');
     }
+
+    // --------------- HANDLE NEW CUSTOMER / VENDOR CREATION ----------------
+    if (IsNew && !CustomerID && CustomerName) {
+      try {
+        if (PayorType === 'Corporation') {
+          console.log('Creating New Vendor for Receipt:', CustomerName);
+          const newVendor = await vendor.create({
+            Name: CustomerName,
+            Active: true,
+            CreatedBy: req.user.id,
+            CreatedDate: new Date(),
+            ModifyBy: req.user.id,
+            ModifyDate: new Date()
+          }, { transaction: t });
+          CustomerID = newVendor.ID;
+        } else {
+          console.log('Creating New Individual Customer for Receipt:', CustomerName);
+          // Default to Individual/Customer
+          const newCustomer = await Customer.create({
+            Name: CustomerName, // Often mapped to FirstName/LastName but logic here implies simplified Name field usage or Name as full string
+            Active: true,
+            CreatedBy: req.user.id,
+            CreatedDate: new Date(),
+            ModifyBy: req.user.id,
+            ModifyDate: new Date()
+          }, { transaction: t });
+          CustomerID = newCustomer.ID;
+        }
+      } catch (creationErr) {
+        console.error('Error creating new customer/vendor during receipt save:', creationErr);
+        // Optional: throw or proceed with null ID (which matches original behavior) 
+        // throw creationErr; 
+      }
+    }
+    // ----------------------------------------------------------------------
 
     if (IsNew) {
       LinkID = generateLinkID();

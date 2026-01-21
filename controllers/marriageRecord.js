@@ -69,6 +69,24 @@ exports.saveTransaction = async (req, res) => {
     const refID = IsNew ? generateLinkID() : data.LinkID;
     const latestapprovalversion = await getLatestApprovalVersion('Marriage Receipt');
 
+    // ------------------ Create New Payor ------------------
+    if (IsNew && !data.CustomerID && data.CustomerName) {
+      try {
+        console.log('Creating New Payor (Marriage):', data.CustomerName);
+        const newCustomer = await Customer.create({
+          Name: data.CustomerName,
+          Active: true,
+          CreatedBy: req.user.id,
+          CreatedDate: new Date(),
+          ModifyBy: req.user.id,
+          ModifyDate: new Date()
+        }, { transaction: t });
+        data.CustomerID = newCustomer.ID;
+      } catch (err) {
+        console.error('Error creating payor:', err);
+      }
+    }
+
     if (IsNew) {
       // Create Transaction Table record
       await TransactionTable.create({

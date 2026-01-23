@@ -373,7 +373,8 @@ exports.save = async (req, res) => {
       FundsID: FundsID,
       ContraNormalBalance: data.ContraNormalBalance,
       ApprovalVersion: latestApprovalVersion,
-      CustomerID: CustomerID || null
+      CustomerID: CustomerID || null,
+      CheckRequested: data.ModeOfPayment === 'Check'
     };
 
     let header;

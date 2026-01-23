@@ -1,5 +1,5 @@
 const Sequelize = require('sequelize');
-module.exports = function(sequelize, DataTypes) {
+module.exports = function (sequelize, DataTypes) {
   return sequelize.define('TransactionTable', {
     ID: {
       type: DataTypes.BIGINT,
@@ -76,15 +76,15 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     Total: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     AmountReceived: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     RemainingBalance: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     PaymentType: {
@@ -96,11 +96,11 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     Credit: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     Debit: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     Active: {
@@ -116,35 +116,35 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     BusinessEarnings: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     OccupationEarnings: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     IncomeProperty: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     BusinessTaxDue: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     OccupationTaxDue: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     PropertyTaxDue: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     Interest: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     BasicTax: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     Year: {
@@ -164,11 +164,11 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     LandValue: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     ImprovementValue: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     ReceivedFrom: {
@@ -188,7 +188,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     TaxRate: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     VendorID: {
@@ -196,7 +196,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     TaxableSale: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     ReceivedPaymentBy: {
@@ -220,7 +220,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     PreviousPayment: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     PropertyID: {
@@ -228,27 +228,27 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     EWT: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     WithheldAmount: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     Vat_Total: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     Discounts: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     AmountDue: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     VATExcludedPrice: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     PropertyID: {
@@ -276,7 +276,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     Balance: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     ObligationRequestNumber: {
@@ -328,7 +328,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     AdvanceFunds: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
     },
     JEVType: {
@@ -380,8 +380,13 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true
     },
     CurrentBalance: {
-      type: DataTypes.DECIMAL(18,2),
+      type: DataTypes.DECIMAL(18, 2),
       allowNull: true
+    },
+    CheckRequested: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false
     }
   }, {
     sequelize,

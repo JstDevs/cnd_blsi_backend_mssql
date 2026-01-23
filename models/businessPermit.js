@@ -196,7 +196,7 @@ module.exports = function (sequelize, DataTypes) {
         },
         status: {
             type: DataTypes.STRING(50),
-            defaultValue: 'Pending',
+            defaultValue: 'Requested',
         },
     }, {
         sequelize,

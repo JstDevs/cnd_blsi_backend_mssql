@@ -15,6 +15,7 @@ const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 const validateApproval = require('../utils/validateApproval');
 const { hasAccess } = require('../utils/checkUserAccess');
 const { Op, literal } = require('sequelize');
+const { stat } = require('fs-extra');
 
 
 exports.create = async (req, res) => {
@@ -148,8 +149,25 @@ exports.create = async (req, res) => {
       transaction: t
     });
 
-    statusValue = matrixExists ? 'Requested' : 'Posted';
-    const latestApprovalVersion = await getLatestApprovalVersion('Obligation Request');
+    // statusValue = matrixExists ? 'Requested' : 'Posted';
+    // const latestApprovalVersion = await getLatestApprovalVersion('Obligation Request');
+
+    const isAutoPost = !matrixExists;
+    statusValue = isAutoPost ? 'Posted' : 'Requested';
+
+    let autoInvoiceNumber = InvoiceNumber;
+    let currentNumber = null;
+
+    if (isAutoPost) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const currentYYMM = `${year}-${month}`;
+
+      currentNumber = await getCurrentNumber(t);
+      autoInvoiceNumber = `${FundsID}-${currentYYMM}-${currentNumber}`;
+    }
+
 
     const newRecord = await TransactionTable.create({
       DocumentTypeID: docID,

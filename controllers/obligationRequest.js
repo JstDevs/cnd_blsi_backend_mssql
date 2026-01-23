@@ -174,7 +174,7 @@ exports.create = async (req, res) => {
       LinkID,
       APAR: 'Obligation Request',
       VendorID,
-      InvoiceNumber,
+      InvoiceNumber: autoInvoiceNumber,
       InvoiceDate,
       ResponsibilityCenter,
       Total,
@@ -268,7 +268,7 @@ exports.create = async (req, res) => {
         Remarks: item.Remarks,
         FPP: item.FPP,
         Discounted: item.Discounted,
-        InvoiceNumber,
+        InvoiceNumber: autoInvoiceNumber,
         NormalBalance: account.ChartofAccounts?.NormalBalance,
         ResponsibilityCenter: item.ResponsibilityCenter,
         Vatable: item.Vatable

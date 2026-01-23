@@ -11,6 +11,7 @@ router.post('/reject', requireAuth, uploader.any(), controller.reject);
 // router.post('/', requireAuth, uploader.any(), controller.create);
 router.get('/', requireAuth, controller.getAll);
 router.get('/selectListForDV', requireAuth, controller.selectListForDV);
+router.get('/pending-cheque', requireAuth, controller.getPendingChequeDVs);
 router.get('/:id', requireAuth, controller.getById);
 // router.put('/:id', requireAuth, uploader.any(), controller.update);
 router.delete('/:id', requireAuth, controller.delete);

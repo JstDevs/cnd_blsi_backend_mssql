@@ -115,11 +115,11 @@ exports.save = async (req, res) => {
 
       if (AddCondition) {
         await TransactionTableModel.update(
-          { Status: 'Posted, Cheque Requested' },
+          { Status: 'Posted, Cheque Pending' },
           { where: { LinkID: data.DisbursementID }, transaction: t }
         );
         await TransactionTableModel.update(
-          { Status: 'Posted, Disbursement Posted, Cheque Requested' },
+          { Status: 'Posted, Disbursement Posted, Cheque Pending' },
           {
             where: {
               InvoiceNumber: data.OBR,
@@ -240,7 +240,7 @@ exports.delete = async (req, res) => {
 
       if (dv) {
         // Update DV status
-        await dv.update({ Status: 'Posted' }, { transaction: t });
+        await dv.update({ Status: 'Posted, Cheque Pending' }, { transaction: t });
 
         if (dv.ObligationRequestNumber) {
           // Update OBR status using exact match for APAR to speed up query
@@ -377,7 +377,7 @@ exports.reject = async (req, res) => {
     // 2. Update Related TransactionTable (DV)
     if (check.DisbursementID) {
       await TransactionTableModel.update(
-        { Status: 'Posted, Cheque Rejected' },
+        { Status: 'Posted, Cheque Pending' },
         { where: { LinkID: check.DisbursementID }, transaction: t }
       );
 

@@ -337,7 +337,9 @@ exports.save = async (req, res) => {
     });
 
     const isAutoPost = !matrixExists;
-    statusValue = isAutoPost ? 'Posted' : 'Requested';
+    statusValue = isAutoPost
+      ? (data.ModeOfPayment === 'Check' ? 'Posted, Cheque Pending' : 'Posted')
+      : 'Requested';
 
     let newInvoiceNumber = data.InvoiceNumber;
     let currentNumber = null;
@@ -720,6 +722,53 @@ exports.getAll = async (req, res) => {
   }
 };
 
+exports.getPendingChequeDVs = async (req, res) => {
+  try {
+    const data = await TransactionTableModel.findAll({
+      where: {
+        Active: 1,
+        Status: {
+          [Op.like]: '%Cheque Pending%'
+        },
+        APAR: {
+          [Op.like]: '%Disbursement Voucher%'
+        }
+      },
+      include: [
+        {
+          model: FundsModel,
+          as: 'Funds',
+          required: false,
+        },
+        {
+          model: EmployeeModel,
+          as: 'Employee',
+          attributes: ['FirstName', 'MiddleName', 'LastName', 'StreetAddress', 'ID'],
+          required: false,
+        },
+        {
+          model: VendorModel,
+          as: 'Vendor',
+          attributes: ['Name', 'TIN', 'StreetAddress', 'ID'],
+          required: false,
+        },
+        {
+          model: CustomerModel,
+          as: 'Customer',
+          attributes: ['Name', 'TIN', 'StreetAddress', 'ID'],
+          required: false,
+        }
+      ],
+      order: [['CreatedDate', 'DESC']]
+    });
+
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Error loading pending cheque DVs:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 
 exports.getById = async (req, res) => {
   try {
@@ -1055,7 +1104,7 @@ exports.approve = async (req, res) => {
       ApprovalProgress: validation.nextSequence || trx.ApprovalProgress,
       InvoiceNumber: newInvoiceNumber,
       Status: isFinal
-        ? (fundCode === '200' || fundCode === '300' ? 'Posted, Cheque Pending' : 'Posted')
+        ? (trx.ModeOfPayment === 'Check' ? 'Posted, Cheque Pending' : 'Posted')
         : validation.nextStatus
     }, { transaction: t });
 

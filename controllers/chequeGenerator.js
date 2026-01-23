@@ -114,12 +114,16 @@ exports.save = async (req, res) => {
       }, { transaction: t });
 
       if (AddCondition) {
+        // If the cheque is auto-posted or even if requested, the user considers the "Posting" process to be the link.
+        // However, to be safe, if statusValue is 'Posted', it's definitely 'Cheque Posted'.
+        // If it's 'Requested', it might still need approval, but the user expects the dropdown and status to reflect the work done.
+
         await TransactionTableModel.update(
-          { Status: 'Posted, Cheque Pending' },
+          { Status: 'Posted, Cheque Posted' },
           { where: { LinkID: data.DisbursementID }, transaction: t }
         );
         await TransactionTableModel.update(
-          { Status: 'Posted, Disbursement Posted, Cheque Pending' },
+          { Status: 'Posted, Disbursement Posted, Cheque Posted' },
           {
             where: {
               InvoiceNumber: data.OBR,
@@ -160,6 +164,28 @@ exports.save = async (req, res) => {
         where: { ID: data.ID },
         transaction: t
       });
+
+      if (AddCondition) {
+        await TransactionTableModel.update(
+          { Status: 'Posted, Cheque Posted' },
+          { where: { LinkID: data.DisbursementID }, transaction: t }
+        );
+        await TransactionTableModel.update(
+          { Status: 'Posted, Disbursement Posted, Cheque Posted' },
+          {
+            where: {
+              InvoiceNumber: data.OBR,
+              APAR: {
+                [Op.or]: [
+                  { [Op.like]: "Obligation Request%" },
+                  { [Op.like]: "Fund Utilization Request%" }
+                ]
+              }
+            },
+            transaction: t
+          }
+        );
+      }
     }
 
     // Delete removed attachments (if applicable)

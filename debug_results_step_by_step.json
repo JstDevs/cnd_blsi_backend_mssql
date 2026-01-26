@@ -1,0 +1,22 @@
+{
+  "join_only": [
+    {
+      "count": 8
+    }
+  ],
+  "account_filter": [
+    {
+      "count": 2
+    }
+  ],
+  "fund_filter": [
+    {
+      "count": 2
+    }
+  ],
+  "status_filter": [
+    {
+      "count": 2
+    }
+  ]
+}

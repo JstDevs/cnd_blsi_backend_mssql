@@ -699,6 +699,35 @@ exports.getAll = async (req, res) => {
           required: false,
         },
         {
+          model: TransactionItems,
+          as: 'TransactionItemsAll',
+          required: false,
+          include: [
+            {
+              model: ItemModel,
+              as: 'Item',
+              required: false,
+            },
+            {
+              model: BudgetModel,
+              as: 'ChargeAccount',
+              include: [
+                {
+                  model: ChartofAccountsModel,
+                  as: 'ChartofAccounts',
+                  required: false,
+                },
+                {
+                  model: DepartmentModel,
+                  as: 'Department',
+                  required: false,
+                }
+              ],
+              required: false,
+            },
+          ]
+        },
+        {
           model: EmployeeModel,
           where: whereClause,
           as: 'RequestedByEmployee', // Employee who requested the voucher

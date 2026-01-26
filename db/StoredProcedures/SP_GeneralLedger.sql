@@ -1,127 +1,95 @@
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS SP_GeneralLedger $$
+
 CREATE PROCEDURE SP_GeneralLedger (
     IN p_accountCode VARCHAR(50),
     IN p_fundID VARCHAR(50),
     IN p_cutoff VARCHAR(50)
 )
 BEGIN
+    -- Standardize dash-less match
+    SET @cleanMatch = REPLACE(p_accountCode, '-', '');
+    IF @cleanMatch = '' THEN SET @cleanMatch = '%'; END IF;
 
     SELECT 
-        tbl.ID,
-        tbl.APAR,
-        tbl.Fund,
-        tbl.AccountName,
-        tbl.AccountCode,
-        tbl.Date,
-        tbl.LedgerItem,
-        tbl.InvoiceNumber,
-        tbl.AccountCodeDisplay,
-        tbl.AccountNameDisplay,
-        tbl.Debit,
-        tbl.Credit,
+        tbl.id,
+        tbl.transaction_id,
+        tbl.link_id,
+        tbl.ap_ar,
+        tbl.fund,
+        tbl.account_name,
+        tbl.account_code,
+        tbl.date,
+        tbl.ledger_item,
+        tbl.invoice_number,
+        tbl.account_code_display,
+        tbl.account_name_display,
+        tbl.debit,
+        tbl.credit,
         CASE
-            WHEN SUM(tbl.Debit) OVER (ORDER BY tbl.InvoiceNumber) = 0.00 THEN NULL
-            ELSE SUM(tbl.Debit) OVER (ORDER BY tbl.InvoiceNumber)
-        END AS Balance,
-        tbl.Municipality
+            WHEN SUM(IFNULL(tbl.debit, 0) - IFNULL(tbl.credit, 0)) OVER (ORDER BY tbl.date, tbl.invoice_number, tbl.id) = 0.00 THEN 0.00
+            ELSE SUM(IFNULL(tbl.debit, 0) - IFNULL(tbl.credit, 0)) OVER (ORDER BY tbl.date, tbl.invoice_number, tbl.id)
+        END AS balance,
+        tbl.municipality
     FROM (
+        -- Part 1: Journal Entry Voucher
         SELECT 
-            jev.ID,
-            trt.APAR,
-            jev.AccountName,
-            jev.AccountCode,
-            DATE(jev.CreatedDate) AS Date,
-            jev.LedgerItem,
-            trt.InvoiceNumber,
-            CASE 
-                WHEN p_accountCode = '%' THEN 'AllAccounts'
-                ELSE p_accountCode 
-            END AS AccountCodeDisplay,
-            CASE 
-                WHEN p_accountCode = '%' THEN 'AllAccounts'
-                ELSE jev.AccountName
-            END AS AccountNameDisplay,
-            CASE 
-                WHEN p_fundID = '%' THEN 'AllFunds'
-                ELSE jev.FundName
-            END AS Fund,
-            CASE 
-                WHEN jev.Debit = 0.00 THEN NULL
-                ELSE jev.Debit
-            END AS Debit,
-            CASE 
-                WHEN jev.Credit = 0.00 THEN NULL
-                ELSE jev.Credit
-            END AS Credit,
-            lmu.Name AS Municipality
-        FROM transactiontable trt
-        LEFT JOIN journalentryvoucher jev ON jev.LinkID = trt.LinkID
-        INNER JOIN funds fnd ON fnd.Name = jev.FundName
-        INNER JOIN lgu lgu ON lgu.ID = 1
-        LEFT JOIN municipality lmu ON lmu.ID = lgu.MunicipalityID
-        WHERE trt.APAR LIKE 'Journal Entry Voucher'
-          AND jev.AccountCode LIKE p_accountCode
-          AND CONCAT(fnd.ID, '') LIKE p_fundID
-          AND jev.CreatedDate <= p_cutoff
+            jev.ID AS id,
+            trt.ID AS transaction_id,
+            trt.LinkID AS link_id,
+            trt.APAR AS ap_ar,
+            IFNULL(fnd.Name, 'N/A') AS fund,
+            jev.AccountName AS account_name,
+            jev.AccountCode AS account_code,
+            DATE(jev.CreatedDate) AS date,
+            jev.LedgerItem AS ledger_item,
+            trt.InvoiceNumber AS invoice_number,
+            p_accountCode AS account_code_display,
+            jev.AccountName AS account_name_display,
+            jev.Debit AS debit,
+            jev.Credit AS credit,
+            '' AS municipality
+        FROM journalentryvoucher jev
+        JOIN transactiontable trt ON TRIM(trt.LinkID) = TRIM(jev.LinkID)
+        LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
+        WHERE (trt.APAR LIKE '%Journal Entry Voucher%' OR trt.APAR LIKE '%JEV%')
+          AND trt.Status IN ('Posted', 'approved', 'Approved')
+          AND (REPLACE(jev.AccountCode, '-', '') LIKE @cleanMatch OR p_accountCode = '%')
+          AND (CONCAT(trt.FundsID, '') LIKE p_fundID OR p_fundID = '%')
+          AND DATE(jev.CreatedDate) <= DATE(p_cutoff)
 
         UNION ALL
 
+        -- Part 2: Disbursement Voucher
         SELECT 
-            trt.ID,
-            trt.APAR,
-            coa.Name AS AccountName,
-            REPLACE(coa.AccountCode, '-', '') AS AccountCode,
-            trt.InvoiceDate AS Date,
-            (
-                SELECT GROUP_CONCAT(itm.Name SEPARATOR ', ')
-                FROM transactionitems tae
-                INNER JOIN item itm ON itm.ID = tae.ItemID
-                WHERE tae.LinkID = tri.LinkID
-                GROUP BY tae.LinkID
-            ) AS LedgerItem,
-            trt.InvoiceNumber,
-            CASE 
-                WHEN p_accountCode = '%' THEN 'AllAccounts'
-                ELSE REPLACE(p_accountCode, '-', '')
-            END AS AccountCodeDisplay,
-            CASE 
-                WHEN p_accountCode = '%' THEN 'AllAccounts'
-                ELSE coa.Name
-            END AS AccountNameDisplay,
-            CASE 
-                WHEN p_fundID = '%' THEN 'AllFunds'
-                ELSE fnd.Name
-            END AS Fund,
-            CASE 
-                WHEN LAG(trt.ID) OVER (ORDER BY trt.InvoiceNumber, trt.Debit DESC) = trt.ID THEN NULL
-                ELSE CASE 
-                    WHEN trt.Debit = 0.00 THEN NULL
-                    ELSE trt.Debit
-                END
-            END AS Debit,
-            CASE 
-                WHEN LAG(trt.ID) OVER (ORDER BY trt.InvoiceNumber, trt.Debit DESC) = trt.ID THEN NULL
-                ELSE CASE 
-                    WHEN trt.Credit = 0.00 THEN NULL
-                    ELSE trt.Credit
-                END
-            END AS Credit,
-            lmu.Name AS Municipality
+            tri.ID AS id,
+            trt.ID AS transaction_id,
+            trt.LinkID AS link_id,
+            trt.APAR AS ap_ar,
+            IFNULL(fnd.Name, 'N/A') AS fund,
+            coa.Name AS account_name,
+            coa.AccountCode AS account_code,
+            trt.InvoiceDate AS date,
+            'Disbursement Entry' AS ledger_item,
+            trt.InvoiceNumber AS invoice_number,
+            p_accountCode AS account_code_display,
+            coa.Name AS account_name_display,
+            trt.Debit AS debit,
+            trt.Credit AS credit,
+            '' AS municipality
         FROM transactiontable trt
-        LEFT JOIN transactionitems tri ON tri.LinkID = trt.LinkID
-        INNER JOIN funds fnd ON fnd.ID = trt.FundsID
-        INNER JOIN transactiontable tro ON tro.InvoiceNumber = trt.ObligationRequestNumber
-        INNER JOIN chartofaccounts coa ON coa.ID = tri.ChargeAccountID
-        INNER JOIN lgu lgu ON lgu.ID = 1
-        INNER JOIN municipality lmu ON lmu.ID = lgu.MunicipalityID
-        WHERE trt.APAR LIKE 'Disbursement Voucher'
-          AND coa.AccountCode LIKE p_accountCode
-          AND CONCAT(fnd.ID, '') LIKE p_fundID
-          AND trt.PostingDate <= p_cutoff
+        JOIN transactionitems tri ON TRIM(tri.LinkID) = TRIM(trt.LinkID)
+        JOIN chartofaccounts coa ON coa.ID = tri.ChargeAccountID
+        LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
+        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%')
+          AND trt.Status IN ('Posted', 'approved', 'Approved')
+          AND (REPLACE(coa.AccountCode, '-', '') LIKE @cleanMatch OR p_accountCode = '%')
+          AND (CONCAT(trt.FundsID, '') LIKE p_fundID OR p_fundID = '%')
+          AND DATE(trt.InvoiceDate) <= DATE(p_cutoff)
 
     ) AS tbl
-    ORDER BY InvoiceNumber, Debit DESC;
+    ORDER BY date, id;
 
 END $$
 

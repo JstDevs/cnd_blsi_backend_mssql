@@ -115,8 +115,27 @@ exports.view = async (req, res) => {
         },
       }
     );
+    console.log('SP_GeneralLedger Raw Results Structure:', {
+      type: typeof results,
+      isArray: Array.isArray(results),
+      keys: results ? Object.keys(results) : [],
+      firstKeyType: results && Object.keys(results).length > 0 ? typeof results[Object.keys(results)[0]] : 'n/a'
+    });
 
-    return res.json(results);
+    // Most robust way to handle both [rows, metadata] and direct rows
+    let finalData = [];
+    if (Array.isArray(results)) {
+      // If it's an array, it might be the rows directly or [rows, metadata]
+      if (results.length > 0 && Array.isArray(results[0])) {
+        finalData = results[0]; // [rows, metadata] case
+      } else {
+        finalData = results; // direct rows case
+      }
+    }
+
+    console.log('Final Data Rows:', finalData.length);
+
+    return res.json(finalData);
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: err.message });

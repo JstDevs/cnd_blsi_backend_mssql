@@ -1,0 +1,78 @@
+{
+  "coa_samples": [
+    {
+      "Name": "Traveling Expenses - Local",
+      "AccountCode": "5-02-01-010"
+    },
+    {
+      "Name": "Cash in Bank - Local Currency, Current Account",
+      "AccountCode": "1-01-02-010"
+    },
+    {
+      "Name": "Cash - Local Treasury",
+      "AccountCode": "1-01-01-010"
+    },
+    {
+      "Name": "bad chart of account",
+      "AccountCode": "1-02-02-00"
+    },
+    {
+      "Name": "Petty Cash",
+      "AccountCode": "1-01-01-020"
+    },
+    {
+      "Name": "Cash in Bank - Local Currency, Current Account",
+      "AccountCode": "1-01-02-010"
+    },
+    {
+      "Name": "Cash in Bank - Local Currency, Savings Account",
+      "AccountCode": "1-01-02-020"
+    },
+    {
+      "Name": "Cash in Bank - Foreign Currency, Current Account",
+      "AccountCode": "1-01-03-010"
+    },
+    {
+      "Name": "Cash in Bank - Foreign Currency, Savings Account",
+      "AccountCode": "1-01-03-020"
+    },
+    {
+      "Name": "Cash in Bank - Local Currency, Time Deposits",
+      "AccountCode": "1-02-01-010"
+    }
+  ],
+  "jev_samples": [
+    {
+      "AccountName": "Traveling Expenses",
+      "AccountCode": "05-02-01-010"
+    },
+    {
+      "AccountName": "Traveling Expenses",
+      "AccountCode": "05-02-01-010"
+    },
+    {
+      "AccountName": "Traveling Expenses",
+      "AccountCode": "05-02-01-010"
+    },
+    {
+      "AccountName": "Cash in bank",
+      "AccountCode": "1-01-02-010"
+    },
+    {
+      "AccountName": "Traveling Expenses - Local",
+      "AccountCode": "5-02-01-010"
+    },
+    {
+      "AccountName": "Traveling Expenses - Local",
+      "AccountCode": "5-02-01-010"
+    },
+    {
+      "AccountName": "Cash - Local Treasury",
+      "AccountCode": "1-01-01-010"
+    },
+    {
+      "AccountName": "Cash - Local Treasury",
+      "AccountCode": "1-01-01-010"
+    }
+  ]
+}

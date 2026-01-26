@@ -1,0 +1,42 @@
+{
+  "isArray": true,
+  "length": 2,
+  "data": [
+    {
+      "id": 7,
+      "transaction_id": 319,
+      "link_id": "34409696",
+      "ap_ar": "Journal Entry Voucher",
+      "fund": "General Fund",
+      "account_name": "Cash - Local Treasury",
+      "account_code": "1-01-01-010",
+      "date": "2026-01-26",
+      "ledger_item": "Cash - Local Treasury",
+      "invoice_number": "JEV-4-2025",
+      "account_code_display": "1-01-01-010",
+      "account_name_display": "Cash - Local Treasury",
+      "debit": "321.00",
+      "credit": "0.00",
+      "balance": "321.00",
+      "municipality": ""
+    },
+    {
+      "id": 8,
+      "transaction_id": 319,
+      "link_id": "34409696",
+      "ap_ar": "Journal Entry Voucher",
+      "fund": "General Fund",
+      "account_name": "Cash - Local Treasury",
+      "account_code": "1-01-01-010",
+      "date": "2026-01-26",
+      "ledger_item": "Cash - Local Treasury",
+      "invoice_number": "JEV-4-2025",
+      "account_code_display": "1-01-01-010",
+      "account_name_display": "Cash - Local Treasury",
+      "debit": "0.00",
+      "credit": "321.00",
+      "balance": "0.00",
+      "municipality": ""
+    }
+  ]
+}

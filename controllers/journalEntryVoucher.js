@@ -107,7 +107,7 @@ exports.create = async (req, res) => {
       },
       transaction: t
     });
-    
+
     statusValue = matrixExists ? 'Requested' : 'Posted';
 
     // get approval version
@@ -143,7 +143,7 @@ exports.create = async (req, res) => {
     const fund = await FundsModel.findByPk(FundsID);
     let fundsName = '';
     if (fund) {
-      fundsName = fund.FundsName;
+      fundsName = fund.Name;
     }
 
     // Insert Journal Entry Items

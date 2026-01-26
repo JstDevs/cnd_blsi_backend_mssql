@@ -122,6 +122,22 @@ exports.save = async (req, res) => {
           { Status: 'Posted, Cheque Posted' },
           { where: { LinkID: data.DisbursementID }, transaction: t }
         );
+
+        if (statusValue === 'Posted') {
+          const dv = await TransactionTableModel.findOne({
+            where: { LinkID: data.DisbursementID },
+            transaction: t
+          });
+          if (dv && dv.FundsID) {
+            const fund = await FundModel.findByPk(dv.FundsID, { transaction: t });
+            if (fund) {
+              await fund.update({
+                Balance: parseFloat(fund.Balance || 0) - parseFloat(data.Amount || 0)
+              }, { transaction: t });
+            }
+          }
+        }
+
         await TransactionTableModel.update(
           { Status: 'Posted, Disbursement Posted, Cheque Posted' },
           {
@@ -170,6 +186,22 @@ exports.save = async (req, res) => {
           { Status: 'Posted, Cheque Posted' },
           { where: { LinkID: data.DisbursementID }, transaction: t }
         );
+
+        if (statusValue === 'Posted') {
+          const dv = await TransactionTableModel.findOne({
+            where: { LinkID: data.DisbursementID },
+            transaction: t
+          });
+          if (dv && dv.FundsID) {
+            const fund = await FundModel.findByPk(dv.FundsID, { transaction: t });
+            if (fund) {
+              await fund.update({
+                Balance: parseFloat(fund.Balance || 0) - parseFloat(data.Amount || 0)
+              }, { transaction: t });
+            }
+          }
+        }
+
         await TransactionTableModel.update(
           { Status: 'Posted, Disbursement Posted, Cheque Posted' },
           {
@@ -250,11 +282,28 @@ exports.delete = async (req, res) => {
     }
 
     // --- Void Check ---
+    const oldStatus = check.Status;
     await check.update({
       Status: 'Void',
       ModifyBy: req.user.id,
       ModifyDate: new Date()
     }, { transaction: t });
+
+    // --- Update Fund Balance if previously Posted ---
+    if (oldStatus === 'Posted' && check.DisbursementID) {
+      const dv = await TransactionTableModel.findOne({
+        where: { LinkID: check.DisbursementID },
+        transaction: t
+      });
+      if (dv && dv.FundsID) {
+        const fund = await FundModel.findByPk(dv.FundsID, { transaction: t });
+        if (fund) {
+          await fund.update({
+            Balance: parseFloat(fund.Balance || 0) + parseFloat(check.Amount || 0)
+          }, { transaction: t });
+        }
+      }
+    }
 
     // --- Revert Related TransactionTable (DV and OBR) ---
     if (check.DisbursementID) {
@@ -359,6 +408,16 @@ exports.approve = async (req, res) => {
             transaction: t
           }
         );
+      }
+
+      // Update Fund Balance
+      if (dv && dv.FundsID) {
+        const fund = await FundModel.findByPk(dv.FundsID, { transaction: t });
+        if (fund) {
+          await fund.update({
+            Balance: parseFloat(fund.Balance || 0) - parseFloat(check.Amount || 0)
+          }, { transaction: t });
+        }
       }
     }
 

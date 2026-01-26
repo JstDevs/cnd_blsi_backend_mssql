@@ -1,4 +1,5 @@
 const { BusinessPermit, ApprovalAudit, sequelize } = require('../config/database'); // Adjust path as needed
+const db = require('../config/database');
 
 // Get all Business Permits
 exports.getAll = async (req, res) => {
@@ -32,22 +33,23 @@ exports.getById = async (req, res) => {
 
 // Create a new Business Permit
 exports.create = async (req, res) => {
-    try {
-        const data = req.body;
+    const t = await sequelize.transaction();
 
-        // const docID = 42;
-        // let statusValue = '';
-        // const matrixExists = await db.ApprovalMatrix.findOne({
-        // where: {
-        //     DocumentTypeID: docID,
-        //     Active: 1,
-        // },
-        // transaction: t
-        // });
+    const docID = 42;
+    let statusValue = '';
+    const matrixExists = await db.ApprovalMatrix.findOne({
+        where: {
+            DocumentTypeID: docID,
+            Active: 1,
+        },
+        transaction: t
+    });
         
-        // statusValue = matrixExists ? 'Requested' : 'Posted';
-
-        // req.body.status = statusValue;
+    statusValue = matrixExists ? 'Requested' : 'Posted';
+    req.body.status = statusValue;
+    
+    try {        
+        const data = req.body;
 
         // Logic to handle attachments if they are uploaded separately or handled here
         // For now, assuming data comes in as a JSON body (attachments might be URLs or handled via multer)

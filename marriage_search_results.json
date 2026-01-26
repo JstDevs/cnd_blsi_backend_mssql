@@ -1,0 +1,94 @@
+{
+  "marriage_transactions": [
+    {
+      "ID": 228,
+      "LinkID": "72668922",
+      "APAR": "Marriage Receipt",
+      "Status": "Approved"
+    },
+    {
+      "ID": 238,
+      "LinkID": "98973246",
+      "APAR": "Marriage Receipt",
+      "Status": "Void"
+    },
+    {
+      "ID": 279,
+      "LinkID": "69115258",
+      "APAR": "Marriage Receipt",
+      "Status": "Posted"
+    }
+  ],
+  "marriage_records": [
+    {
+      "ID": 1,
+      "LinkID": 46455837,
+      "CustomerID": 1,
+      "CustomerAge": 123,
+      "MarytoID": null,
+      "MarrytoAge": 12,
+      "Cenomar": "eqw",
+      "RegisterNumber": "123",
+      "CreatedBy": 6,
+      "CreatedDate": "2025-08-15",
+      "ModifyBy": null,
+      "ModifyDate": null
+    },
+    {
+      "ID": 2,
+      "LinkID": 72668922,
+      "CustomerID": 5,
+      "CustomerAge": 25,
+      "MarytoID": null,
+      "MarrytoAge": 24,
+      "Cenomar": "CENOMAR 123",
+      "RegisterNumber": "123 456 7890",
+      "CreatedBy": 6,
+      "CreatedDate": "2026-01-15",
+      "ModifyBy": null,
+      "ModifyDate": null
+    },
+    {
+      "ID": 3,
+      "LinkID": 94634324,
+      "CustomerID": 2,
+      "CustomerAge": 45,
+      "MarytoID": null,
+      "MarrytoAge": 34,
+      "Cenomar": "wrwr",
+      "RegisterNumber": "34254453",
+      "CreatedBy": 6,
+      "CreatedDate": "2026-01-16",
+      "ModifyBy": null,
+      "ModifyDate": null
+    },
+    {
+      "ID": 4,
+      "LinkID": 98973246,
+      "CustomerID": 2,
+      "CustomerAge": 43,
+      "MarytoID": null,
+      "MarrytoAge": 34,
+      "Cenomar": "wrwr",
+      "RegisterNumber": "34254453",
+      "CreatedBy": 6,
+      "CreatedDate": "2026-01-16",
+      "ModifyBy": null,
+      "ModifyDate": null
+    },
+    {
+      "ID": 5,
+      "LinkID": 69115258,
+      "CustomerID": 5,
+      "CustomerAge": 25,
+      "MarytoID": null,
+      "MarrytoAge": 24,
+      "Cenomar": "CENOMAR 123",
+      "RegisterNumber": "123 456 7890",
+      "CreatedBy": 6,
+      "CreatedDate": "2026-01-20",
+      "ModifyBy": null,
+      "ModifyDate": null
+    }
+  ]
+}

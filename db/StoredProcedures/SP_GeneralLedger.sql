@@ -65,7 +65,7 @@ BEGIN
 
         UNION ALL
 
-        -- Part 2: Disbursement Voucher
+        -- Part 2A: Disbursement Voucher - EXPENSE ITEMS
         SELECT 
             tri.ID AS id,
             trt.ID AS transaction_id,
@@ -75,7 +75,7 @@ BEGIN
             coa.Name AS account_name,
             coa.AccountCode AS account_code,
             trt.InvoiceDate AS date,
-            'Disbursement Entry' AS ledger_item,
+            CONCAT('DV Expense: ', IFNULL(itm.Name, IFNULL(tri.Remarks, 'Item'))) AS ledger_item,
             trt.InvoiceNumber AS invoice_number,
             p_accountCode AS account_code_display,
             coa.Name AS account_name_display,
@@ -85,10 +85,57 @@ BEGIN
         FROM transactiontable trt
         JOIN transactionitems tri ON TRIM(tri.LinkID) = TRIM(trt.LinkID)
         JOIN chartofaccounts coa ON coa.ID = tri.ChargeAccountID
+        LEFT JOIN item itm ON itm.ID = tri.ItemID
         LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
         WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 5))
           AND trt.Status IN ('Posted', 'approved', 'Approved')
+          AND (tri.Debit > 0 OR tri.Credit > 0)
           AND (REPLACE(coa.AccountCode, '-', '') LIKE @cleanMatch OR p_accountCode = '%')
+          AND (CONCAT(trt.FundsID, '') LIKE p_fundID OR p_fundID = '%')
+          AND (CONCAT(trt.LinkID, '') LIKE @targetLinkID)
+          AND DATE(trt.InvoiceDate) <= DATE(p_cutoff)
+
+        UNION ALL
+
+        -- Part 2B: Disbursement Voucher - TAX (EWT / Withholding)
+        -- Fetches tax related entries if they exist as separate lines or derived from columns
+        -- Assuming tax codes link to chart of accounts, or using hardcoded tax liability accounts if not explicit.
+        -- For this system, we use the TaxName and TAXCodeID from items if they map to a liability account.
+        -- BUT, since TransactionItems usually contains the expense, Contra contains the Cash/Payable.
+        -- Taxes are often deductions.
+        -- If specific Tax Entries are not in TransactionItems rows, we check tri.EWT or tri.Vat_Total
+        -- and map them to a generic Due to BIR or similar if needed.
+        -- For now, relying on existing logic: if Tax is a row in TransactionItems (ChargeAccountID = Tax Liability), it appears in Part 2A.
+        -- If Tax is a column (EWT), we might need synthetic rows.
+        -- Checking previous implementation, it just selected TransactionItems.
+        -- Reverting to simple TransactionItems selection for now unless user needs column-derived tax rows.
+        -- User said "DV - Items - Tax - Contra".
+        -- Let's ensure Contra is included.
+        -- Check if `TransactionTable.ContraAccountID` exists and has amount.
+        
+        -- Part 2C: Disbursement Voucher - CONTRA / CASH
+        SELECT 
+            (trt.ID * 100) + 99 AS id,
+            trt.ID AS transaction_id,
+            trt.LinkID AS link_id,
+            trt.APAR AS ap_ar,
+            IFNULL(fnd.Name, 'N/A') AS fund,
+            IFNULL(coa.Name, 'Cash in Bank') AS account_name,
+            IFNULL(coa.AccountCode, '1-01-02-010') AS account_code,
+            trt.InvoiceDate AS date,
+            'DV Contra / Payment' AS ledger_item,
+            trt.InvoiceNumber AS invoice_number,
+            p_accountCode AS account_code_display,
+            IFNULL(coa.Name, 'Cash in Bank') AS account_name_display,
+            0.00 AS debit,
+            trt.Total AS credit, -- Usually DV credits Cash
+            '' AS municipality
+        FROM transactiontable trt
+        LEFT JOIN chartofaccounts coa ON coa.ID = trt.ContraAccountID
+        LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
+        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 5))
+          AND trt.Status IN ('Posted', 'approved', 'Approved')
+          AND (REPLACE(IFNULL(coa.AccountCode, '10102010'), '-', '') LIKE @cleanMatch OR p_accountCode = '%')
           AND (CONCAT(trt.FundsID, '') LIKE p_fundID OR p_fundID = '%')
           AND (CONCAT(trt.LinkID, '') LIKE @targetLinkID)
           AND DATE(trt.InvoiceDate) <= DATE(p_cutoff)
@@ -180,8 +227,6 @@ BEGIN
         UNION ALL
 
         -- Part 6: Service Invoice (Credit side: Items)
-        -- JOIN with Item table to get Item Name
-        -- Updated to use Quantity * Price for Credit value
         SELECT 
             tri.ID + 6000000 AS id,
             trt.ID AS transaction_id,

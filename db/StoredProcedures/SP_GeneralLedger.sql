@@ -57,7 +57,7 @@ BEGIN
         JOIN transactiontable trt ON TRIM(trt.LinkID) = TRIM(jev.LinkID)
         LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
         WHERE (trt.APAR LIKE '%Journal Entry Voucher%' OR trt.APAR LIKE '%JEV%' OR trt.DocumentTypeID = 23)
-          AND trt.Status IN ('Posted', 'approved', 'Approved')
+          AND (trt.Status LIKE '%Posted%' OR trt.Status LIKE '%Approved%')
           AND (REPLACE(jev.AccountCode, '-', '') LIKE @cleanMatch OR p_accountCode = '%')
           AND (CONCAT(trt.FundsID, '') LIKE p_fundID OR p_fundID = '%')
           AND (CONCAT(trt.LinkID, '') LIKE @targetLinkID)
@@ -87,8 +87,8 @@ BEGIN
         JOIN chartofaccounts coa ON coa.ID = tri.ChargeAccountID
         LEFT JOIN item itm ON itm.ID = tri.ItemID
         LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
-        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 5))
-          AND trt.Status IN ('Posted', 'approved', 'Approved')
+        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 5, 14))
+          AND (trt.Status LIKE '%Posted%' OR trt.Status LIKE '%Approved%') -- Inclusive check for "Posted, Cheque Posted"
           AND (tri.Debit > 0 OR tri.Credit > 0)
           AND (REPLACE(coa.AccountCode, '-', '') LIKE @cleanMatch OR p_accountCode = '%')
           AND (CONCAT(trt.FundsID, '') LIKE p_fundID OR p_fundID = '%')
@@ -97,22 +97,6 @@ BEGIN
 
         UNION ALL
 
-        -- Part 2B: Disbursement Voucher - TAX (EWT / Withholding)
-        -- Fetches tax related entries if they exist as separate lines or derived from columns
-        -- Assuming tax codes link to chart of accounts, or using hardcoded tax liability accounts if not explicit.
-        -- For this system, we use the TaxName and TAXCodeID from items if they map to a liability account.
-        -- BUT, since TransactionItems usually contains the expense, Contra contains the Cash/Payable.
-        -- Taxes are often deductions.
-        -- If specific Tax Entries are not in TransactionItems rows, we check tri.EWT or tri.Vat_Total
-        -- and map them to a generic Due to BIR or similar if needed.
-        -- For now, relying on existing logic: if Tax is a row in TransactionItems (ChargeAccountID = Tax Liability), it appears in Part 2A.
-        -- If Tax is a column (EWT), we might need synthetic rows.
-        -- Checking previous implementation, it just selected TransactionItems.
-        -- Reverting to simple TransactionItems selection for now unless user needs column-derived tax rows.
-        -- User said "DV - Items - Tax - Contra".
-        -- Let's ensure Contra is included.
-        -- Check if `TransactionTable.ContraAccountID` exists and has amount.
-        
         -- Part 2C: Disbursement Voucher - CONTRA / CASH
         SELECT 
             (trt.ID * 100) + 99 AS id,
@@ -133,8 +117,8 @@ BEGIN
         FROM transactiontable trt
         LEFT JOIN chartofaccounts coa ON coa.ID = trt.ContraAccountID
         LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
-        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 5))
-          AND trt.Status IN ('Posted', 'approved', 'Approved')
+        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 5, 14))
+          AND (trt.Status LIKE '%Posted%' OR trt.Status LIKE '%Approved%')
           AND (REPLACE(IFNULL(coa.AccountCode, '10102010'), '-', '') LIKE @cleanMatch OR p_accountCode = '%')
           AND (CONCAT(trt.FundsID, '') LIKE p_fundID OR p_fundID = '%')
           AND (CONCAT(trt.LinkID, '') LIKE @targetLinkID)

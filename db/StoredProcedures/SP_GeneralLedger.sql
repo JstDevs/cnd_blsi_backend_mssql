@@ -87,7 +87,7 @@ BEGIN
         JOIN chartofaccounts coa ON coa.ID = tri.ChargeAccountID
         LEFT JOIN item itm ON itm.ID = tri.ItemID
         LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
-        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 5, 14))
+        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 14))
           AND (trt.Status LIKE '%Posted%' OR trt.Status LIKE '%Approved%') -- Inclusive check for "Posted, Cheque Posted"
           AND (tri.Debit > 0 OR tri.Credit > 0)
           AND (REPLACE(coa.AccountCode, '-', '') LIKE @cleanMatch OR p_accountCode = '%')
@@ -118,7 +118,7 @@ BEGIN
         JOIN transactionitems tri ON TRIM(tri.LinkID) = TRIM(trt.LinkID)
         LEFT JOIN item itm ON itm.ID = tri.ItemID
         LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
-        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 5, 14))
+        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 14))
           AND (trt.Status LIKE '%Posted%' OR trt.Status LIKE '%Approved%')
           AND (IFNULL(tri.WithheldAmount, 0) <> 0)
           AND ('20201010' LIKE @cleanMatch OR p_accountCode = '%')
@@ -148,7 +148,7 @@ BEGIN
         FROM transactiontable trt
         LEFT JOIN chartofaccounts coa ON coa.ID = trt.ContraAccountID
         LEFT JOIN funds fnd ON fnd.ID = trt.FundsID
-        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 5, 14))
+        WHERE (trt.APAR LIKE '%Disbursement Voucher%' OR trt.APAR LIKE '%DV%' OR trt.DocumentTypeID IN (4, 14))
           AND (trt.Status LIKE '%Posted%' OR trt.Status LIKE '%Approved%')
           AND (REPLACE(IFNULL(coa.AccountCode, '10102010'), '-', '') LIKE @cleanMatch OR p_accountCode = '%')
           AND (CONCAT(trt.FundsID, '') LIKE p_fundID OR p_fundID = '%')

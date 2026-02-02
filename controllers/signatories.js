@@ -28,7 +28,7 @@ exports.getAll = async (req, res) => {
         { model: sequelize.models.Employee, as: 'SignatoryFour', attributes: ['FirstName', 'LastName'] },
         { model: sequelize.models.Employee, as: 'SignatoryFive', attributes: ['FirstName', 'LastName'] },
       ],
-      order: [['ID', 'ASC']],
+      order: [[{ model: sequelize.models.DocumentType, as: 'DocumentType' }, 'Name', 'ASC']],
     });
 
     res.json(items);

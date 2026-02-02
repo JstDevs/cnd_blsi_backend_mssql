@@ -1,5 +1,5 @@
 const Sequelize = require('sequelize');
-module.exports = function(sequelize, DataTypes) {
+module.exports = function (sequelize, DataTypes) {
   return sequelize.define('DataSource', {
     ID: {
       autoIncrement: true,
@@ -49,8 +49,8 @@ module.exports = function(sequelize, DataTypes) {
     },
   }, {
     sequelize,
-    tableName: 'datasource',
-  
+    tableName: 'datasources',
+
     timestamps: false
   });
 };

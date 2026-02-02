@@ -15,17 +15,26 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
+    console.log('GET /dataSource - Attempting to fetch latest record');
+    if (!datasource) {
+      console.error('DataSource model is UNDEFINED in controller!');
+      throw new Error('DataSource model is not initialized');
+    }
     const latest = await datasource.findOne({
       order: [['ID', 'DESC']],
     });
 
-    if (!latest) return res.status(404).json({ message: 'No Data Source found' });
+    if (!latest) {
+      console.log('GET /dataSource - No records found, returning empty object');
+      return res.json({});
+    }
 
     // Convert Sequelize instance to plain object
     const data = latest.toJSON();
-
+    console.log('GET /dataSource - Success');
     res.json(data);
   } catch (err) {
+    console.error('GET /dataSource - Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 };
@@ -45,7 +54,7 @@ exports.update = async (req, res) => {
   try {
     const { InformationOne, InformationTwo, InformationThree, InformationFour, InformationFive, InformationSix, InformationSeven, InformationEight, InformationNine, InformationTen } = req.body;
     const [updated] = await datasource.update({ InformationOne, InformationTwo, InformationThree, InformationFour, InformationFive, InformationSix, InformationSeven, InformationEight, InformationNine, InformationTen }, {
-      where: { id: req.params.id }
+      where: { ID: req.params.id }
     });
     if (updated) {
       const updatedItem = await datasource.findByPk(req.params.id);

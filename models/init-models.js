@@ -95,6 +95,7 @@ var _VendorCustomerType = require("./vendorCustomerType");
 var _VendorType = require("./vendorType");
 var _BusinessPermit = require("./businessPermit");
 var _UserUserAccess = require("./Useruseraccess");
+var _DataSource = require("./dataSource");
 const chartofAccounts = require("./chartofAccounts");
 
 function initModels(sequelize) {
@@ -194,6 +195,7 @@ function initModels(sequelize) {
   var vendorType = _VendorType(sequelize, DataTypes);
   var BusinessPermit = _BusinessPermit(sequelize, DataTypes);
   var UserUserAccess = _UserUserAccess(sequelize, DataTypes);
+  var DataSource = _DataSource(sequelize, DataTypes);
 
   BudgetChange.belongsTo(BudgetType, { as: "BudgetType", foreignKey: "BudgetTypeID" });
   BudgetType.hasMany(BudgetChange, { as: "BudgetChanges", foreignKey: "BudgetTypeID" });
@@ -538,7 +540,8 @@ function initModels(sequelize) {
     vendorCustomerType,
     vendorType,
     UserUserAccess,
-    BusinessPermit
+    BusinessPermit,
+    DataSource
   ]
 
   for (const modelName in models) {
@@ -642,7 +645,8 @@ function initModels(sequelize) {
     vendorCustomerType,
     vendorType,
     UserUserAccess,
-    BusinessPermit
+    BusinessPermit,
+    DataSource
   };
 }
 module.exports = initModels;

@@ -213,9 +213,9 @@ exports.create = async (req, res) => {
       }
 
       // --- Budget Validation ---
-      const appropriation = parseFloat(account.Appropriation || 0);
-      const used = parseFloat(account.PreEncumbrance || 0) + parseFloat(account.Encumbrance || 0);
-      const available = appropriation - used;
+      const allotmentBalance = parseFloat(account.AllotmentBalance || 0);
+      const used = parseFloat(account.PreEncumbrance || 0);
+      const available = allotmentBalance - used;
       const currentAmount = parseFloat(item.subtotal || item.Sub_Total || 0);
 
       if (currentAmount > available) {

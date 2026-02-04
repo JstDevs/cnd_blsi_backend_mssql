@@ -1,12 +1,13 @@
-DELIMITER $$
+-- DELIMITER $$
 
-ALTER PROCEDURE SP_SCBAA (
+DROP PROCEDURE IF EXISTS SP_SCBAA;
+CREATE PROCEDURE SP_SCBAA (
   IN fiscalYear VARCHAR(50)
 )
 BEGIN
   SELECT
     act.Name AS Type,
-    acs.ID AS SubIDx,
+    acs.ID AS SubID,
     acs.Name AS Subtype,
     acc.Name AS Category,
     coa.Name AS ChartOfAccounts,
@@ -29,7 +30,9 @@ BEGIN
     SUM(bud.TotalAmount) - SUM(ABS(bud.Charges)) AS Difference2_Sum,
 
     lmu.Name AS Municipality,
-    lpr.Name AS Province
+    lpr.Name AS Province,
+
+    fiscalYear AS Extra
 
   FROM budget AS bud
     INNER JOIN chartofaccounts  AS coa ON coa.ID = bud.ChartOfAccountsID
@@ -53,6 +56,7 @@ BEGIN
     Period,
     lmu.Name,
     lpr.Name;
-END $$
+END 
+-- $$
 
-DELIMITER ;
+-- DELIMITER ;

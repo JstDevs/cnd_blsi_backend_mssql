@@ -3,7 +3,7 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const { Op, fn, col, literal } = require('sequelize');
-const db=require("../config/database");
+const db = require("../config/database");
 const { getAllWithAssociations } = require('../models/associatedDependency');
 const exportToExcel = async (data, filename) => {
   const workbook = new ExcelJS.Workbook();
@@ -59,7 +59,7 @@ const mockDataDaily = [
   }
 ];
 
-const mockDataMonthly  = [
+const mockDataMonthly = [
   {
     "ChargeAccountID": 201,
     "FundsID": 1,
@@ -420,7 +420,7 @@ exports.exportExcelDaily = async (req, res) => {
         },
       }
     );
-    
+
     const filename = `Collection_Report_Daily_${Date.now()}.xlsx`;
     const filePath = await exportToExcel(results, filename);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');

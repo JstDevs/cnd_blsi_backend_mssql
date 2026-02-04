@@ -1,8 +1,8 @@
 const { sequelize } = require('../config/database');
 const { QueryTypes, Op } = require('sequelize');
-const db=require("../config/database")
+const db = require("../config/database")
 exports.getGeneralJournal = async (req, res) => {
-const { startDate, endDate, fundID, code } = req.body;
+  const { startDate, endDate, fundID, code } = req.body;
 
   try {
     // const results = await sequelize.query(`
@@ -56,106 +56,106 @@ const { startDate, endDate, fundID, code } = req.body;
     //   replacements: { startDate, endDate, fundID, code },
     //   type: QueryTypes.SELECT
     // });
- const municipality = await db.Lgu.findOne({
-  where: { id: 1 },
-  include: [{
-    model: db.municipality,
-    as: 'Municipality'
-  }]
-});
-const municipalityName = municipality ? municipality.Municipality.Name : 'Unknown Municipality';
+    const municipality = await db.Lgu.findOne({
+      where: { id: 1 },
+      include: [{
+        model: db.municipality,
+        as: 'Municipality'
+      }]
+    });
+    const municipalityName = municipality ? municipality.Municipality.Name : 'Unknown Municipality';
     const results = await db.TransactionTable.findAll({
-  where: {
-    APAR: {
-      [Op.in]: ['Journal Entry Voucher', 'Disbursement Voucher']
-    },
-    InvoiceDate: {
-      [Op.between]: [startDate, endDate]
-    }
-  },
-  include: [
-    {
-      model: db.GeneralLedger,
-      as: 'GeneralLedger',
       where: {
-        FundID: fundID,
-        AccountCode:code
+        APAR: {
+          [Op.in]: ['Journal Entry Voucher', 'Disbursement Voucher']
+        },
+        InvoiceDate: {
+          [Op.between]: [startDate, endDate]
+        }
       },
-      attributes: [
-        [sequelize.fn('REPLACE', sequelize.col('GeneralLedger.AccountCode'), '-', ''), 'AccountCode'],
-        'Debit',
-        'Credit',
-        'FundName'
-      ]
-    },
-    {
-      model: db.ApprovalAudit,
-      as:"ApprovalAudit",
-      // where: { SequenceOrder: 0 },
-      // required: false,
       include: [
         {
-          model: db.employee,
-          as: 'Employee',
-          include: [{ model: db.position ,as:'Position'}]
-        }
-      ]
-    },
-    
-  ],
-  // order: [
-  //   ['LinkID', 'ASC'],
-  //   ['InvoiceDate', 'ASC'],
-  //   [db.GeneralLedger, 'Debit', 'DESC']
-  // ],
-  attributes: [
-    //  [
-    //   sequelize.literal(`(
-    //     SELECT UPPER(m.Name)
-    //     FROM LGU l
-    //     JOIN Municipality m ON m.ID = l.MunicipalityID
-    //     WHERE l.ID = 1
-    //     LIMIT 1
-    //   )`),
-    //   'Municipality'
-    // ],
-    'InvoiceDate',
-    'InvoiceNumber',
-    'Remarks',
-    [sequelize.col('ApprovalAudit.Employee.FirstName'), 'FirstName'],
-[sequelize.col('ApprovalAudit.Employee.MiddleName'), 'MiddleName'],
-[sequelize.col('ApprovalAudit.Employee.LastName'), 'LastName'],
+          model: db.GeneralLedger,
+          as: 'GeneralLedger',
+          where: {
+            FundID: fundID,
+            AccountCode: code
+          },
+          attributes: [
+            [sequelize.fn('REPLACE', sequelize.col('GeneralLedger.AccountCode'), '-', ''), 'AccountCode'],
+            'Debit',
+            'Credit',
+            'FundName'
+          ]
+        },
+        {
+          model: db.ApprovalAudit,
+          as: "ApprovalAudit",
+          // where: { SequenceOrder: 0 },
+          // required: false,
+          include: [
+            {
+              model: db.employee,
+              as: 'Employee',
+              include: [{ model: db.position, as: 'Position' }]
+            }
+          ]
+        },
 
-    [sequelize.literal(`CASE WHEN '${fundID}' = '%' THEN 'All Funds' ELSE GeneralLedger.FundName END`), 'Funds'],
-    [sequelize.literal(`'${startDate}'`), 'StartDate'],
-    [sequelize.literal(`'${endDate}'`), 'EndDate'],
-    [sequelize.literal(`'S/L'`), 'SL'],
-    // [sequelize.literal(`CONCAT(ApprovalAudit.Employee.FirstName, ' ', LEFT(ApprovalAudit.Employee.MiddleName, 1), '. ', ApprovalAudit.Employee.LastName)`), 'Approver'],
-    [sequelize.col('ApprovalAudit.Employee.Position.Name'), 'Position'],
-    [sequelize.fn('MAX', sequelize.col('ApprovalAudit.ApprovalOrder')), 'a']
-  ],
-  group: [
-    'InvoiceDate',
-    'InvoiceNumber',
-    'Remarks',
-    'GeneralLedger.AccountCode',
-    'GeneralLedger.Debit',
-    'GeneralLedger.Credit',
-    'GeneralLedger.FundName',
-    'ApprovalAudit.Employee.FirstName',
-    'ApprovalAudit.Employee.MiddleName',
-    'ApprovalAudit.Employee.LastName',
-    'ApprovalAudit.Employee.Position.Name',
-    // 'Municipality.Name'
-  ],
-  raw: true
-});
-const finalResults = results.map(r => ({
-  ...r,
-  Municipality: municipalityName,
-  Approver: `${r.FirstName} ${r.MiddleName || ''}. ${r.LastName}`
+      ],
+      // order: [
+      //   ['LinkID', 'ASC'],
+      //   ['InvoiceDate', 'ASC'],
+      //   [db.GeneralLedger, 'Debit', 'DESC']
+      // ],
+      attributes: [
+        //  [
+        //   sequelize.literal(`(
+        //     SELECT UPPER(m.Name)
+        //     FROM LGU l
+        //     JOIN Municipality m ON m.ID = l.MunicipalityID
+        //     WHERE l.ID = 1
+        //     LIMIT 1
+        //   )`),
+        //   'Municipality'
+        // ],
+        'InvoiceDate',
+        'InvoiceNumber',
+        'Remarks',
+        [sequelize.col('ApprovalAudit.Employee.FirstName'), 'FirstName'],
+        [sequelize.col('ApprovalAudit.Employee.MiddleName'), 'MiddleName'],
+        [sequelize.col('ApprovalAudit.Employee.LastName'), 'LastName'],
 
-}));
+        [sequelize.literal(`CASE WHEN '${fundID}' = '%' THEN 'All Funds' ELSE GeneralLedger.FundName END`), 'Funds'],
+        [sequelize.literal(`'${startDate}'`), 'StartDate'],
+        [sequelize.literal(`'${endDate}'`), 'EndDate'],
+        [sequelize.literal(`'S/L'`), 'SL'],
+        // [sequelize.literal(`CONCAT(ApprovalAudit.Employee.FirstName, ' ', LEFT(ApprovalAudit.Employee.MiddleName, 1), '. ', ApprovalAudit.Employee.LastName)`), 'Approver'],
+        [sequelize.col('ApprovalAudit.Employee.Position.Name'), 'Position'],
+        [sequelize.fn('MAX', sequelize.col('ApprovalAudit.ApprovalOrder')), 'a']
+      ],
+      group: [
+        'InvoiceDate',
+        'InvoiceNumber',
+        'Remarks',
+        'GeneralLedger.AccountCode',
+        'GeneralLedger.Debit',
+        'GeneralLedger.Credit',
+        'GeneralLedger.FundName',
+        'ApprovalAudit.Employee.FirstName',
+        'ApprovalAudit.Employee.MiddleName',
+        'ApprovalAudit.Employee.LastName',
+        'ApprovalAudit.Employee.Position.Name',
+        // 'Municipality.Name'
+      ],
+      raw: true
+    });
+    const finalResults = results.map(r => ({
+      ...r,
+      Municipality: municipalityName,
+      Approver: `${r.FirstName} ${r.MiddleName || ''}. ${r.LastName}`
+
+    }));
 
     res.json(finalResults);
   } catch (err) {

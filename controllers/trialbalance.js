@@ -1,9 +1,9 @@
 const { sequelize } = require('../config/database');
 const { QueryTypes } = require('sequelize');
-const {  fn, col, literal } = require("sequelize");
+const { fn, col, literal } = require("sequelize");
 const { Op } = require("sequelize");
-const {getAllWithAssociations}=require("../models/associatedDependency");
-const db=require('../config/database')
+const { getAllWithAssociations } = require("../models/associatedDependency");
+const db = require('../config/database')
 exports.getFunds = async (req, res) => {
   const result = await sequelize.query(
     `SELECT Name FROM Funds WHERE Active = 1`,
@@ -44,14 +44,14 @@ exports.getTrialBalance = async (req, res) => {
     //     type: QueryTypes.SELECT
     //   }
     // );
-  const approverResult = await getAllWithAssociations(db.employee, 1, {
-      ID:approverID
+    const approverResult = await getAllWithAssociations(db.employee, 1, {
+      ID: approverID
     });
     const approver = approverResult[0]?.ID || '%';
 
     const fundResult = await db.Funds.findAll({
       where: {
-       ID:fund
+        ID: fund
       },
     });
     const fundID = fundResult[0]?.ID || '%';
@@ -60,7 +60,7 @@ exports.getTrialBalance = async (req, res) => {
       include: [
         {
           model: db.ChartofAccounts,
-          as:"ChartofAccounts",
+          as: "ChartofAccounts",
           include: [
             {
               model: db.Budget,

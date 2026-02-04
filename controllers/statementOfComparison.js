@@ -126,7 +126,7 @@ exports.exportExcel = async (req, res) => {
     const {
       fiscalYearID,
     } = req.body;
-    
+
     const results = await sequelize.query(
       'CALL SP_SCBAA(:fiscalYear)',
       {

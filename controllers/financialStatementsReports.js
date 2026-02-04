@@ -12,16 +12,16 @@ const exportToExcel = async (data, filename) => {
 
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Consolidate Comparison');
-  
+
   // Handle nested array results from sequelize stored procedures
   const flatData = Array.isArray(data) && data.length > 0 && Array.isArray(data[0]) ? data[0] : data;
-  
+
   if (flatData.length > 0) {
     worksheet.columns = Object.keys(flatData[0] || {}).map(key => ({ header: key, key }));
     worksheet.addRows(flatData);
     worksheet.columns.forEach(col => col.width = col.header.length < 12 ? 12 : col.header.length);
   }
-  
+
   const filePath = path.join(exportsDir, filename);
   await workbook.xlsx.writeFile(filePath);
   return filePath;
@@ -116,7 +116,7 @@ exports.exportExcel = async (req, res) => {
     const {
       year,
     } = req.body;
-    
+
     const results = await sequelize.query(
       'CALL SP_ComparisonFSP(:Date, :Notes)',
       {
@@ -127,7 +127,7 @@ exports.exportExcel = async (req, res) => {
     const filename = `Consolidated_Statement_of_Financial_Position_${Date.now()}.xlsx`;
     const filePath = await exportToExcel(results, filename);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-    res.download(filePath, err => { 
+    res.download(filePath, err => {
       if (err) {
         console.error('Error downloading file:', err);
         if (fs.existsSync(filePath)) {

@@ -166,8 +166,8 @@ exports.exportExcel = async (req, res) => {
       fundsID,
       departmentID,
     } = req.body;
-    
-        
+
+
     const results = await sequelize.query(
       'CALL SP_SAAOB(:startDate, :endDate, :fiscalYear, :fundID, :user)',
       {

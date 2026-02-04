@@ -101,7 +101,7 @@ exports.exportExcel = async (req, res) => {
       approverID,
       ledger,
     } = req.body;
-    
+
     const results = await sequelize.query(
       'CALL SP_TrialBalance(:endDate, :fundID, :approver, :sub)',
       {

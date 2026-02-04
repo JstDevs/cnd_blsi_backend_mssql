@@ -89,15 +89,15 @@ exports.exportExcel = async (req, res) => {
       EndDate,
       FundID,
     } = req.body;
-    
+
     const results = await sequelize.query(
       'CALL SP_Cashbook_SanDionisio(:startDate, :endDate, :fundID, :user)',
       {
         replacements: { startDate: StartDate, endDate: EndDate, fundID: FundID, user: req.user.employeeID },
       }
     );
-    
-    
+
+
     const filename = `Cashbook_${Date.now()}.xlsx`;
     const filePath = await exportToExcel(results, filename);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');

@@ -57,13 +57,13 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
   // dialect: 'mssql', // Use 'mssql' for Microsoft SQL Server
   // dialect: 'mysql', // Use 'mysql' for MySQL
   port: parseInt(process.env.DB_PORT, 10) || 3306, // Parse port as integer
-   pool: {
+  pool: {
     max: 50,
     min: 0,
     acquire: 30000, // ⬅️ 30 sec wait for connection
     idle: 10000     // ⬅️ 10 sec before releasing idle
   },
- 
+
   dialectOptions: {
     connectTimeout: 60000, // ⬅️ 60 sec MySQL connection timeout
     // MySQL-specific options (not SQL Server options)
@@ -72,7 +72,7 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
 });
 
 sequelize.authenticate()
-  .then(async() => {
+  .then(async () => {
     // await db.UserAccess.initialize();
     console.log('✅ Connection has been established successfully.');
   })
@@ -109,7 +109,7 @@ sequelize.sync({
   // alter: true // Set to true to update existing tables
 }).then(async () => {
   console.log('✅ All models were synchronized successfully.');
-  
+
   // await seedServiceInvoiceAccounts(db);
   // await seedLgu(db);
   // await seedUserAccess(db);

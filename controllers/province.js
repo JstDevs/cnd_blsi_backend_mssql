@@ -1,9 +1,18 @@
-const { province } = require('../config/database');
+const db = require('../config/database');
+const province = db.province;
 
 exports.create = async (req, res) => {
   try {
     const { RegionCode, Name } = req.body;
-    const item = await province.create({ RegionCode, Name, Active: true, CreatedBy: req.user.id, CreatedDate: new Date(), ModifyBy: req.user.id, ModifyDate: new Date() });
+    const item = await province.create({
+      RegionCode,
+      Name,
+      Active: true,
+      CreatedBy: req.user ? req.user.id : '1',
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: req.user ? req.user.id : '1',
+      ModifyDate: db.sequelize.fn('GETDATE')
+    });
     res.status(201).json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -21,7 +30,8 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await province.findOne({ where: { id: req.params.id, Active: true } });
+    // Note: Model uses ID (uppercase)
+    const item = await province.findOne({ where: { ID: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "province not found" });
   } catch (err) {
@@ -32,8 +42,14 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { RegionCode, Name } = req.body;
-    const [updated] = await province.update({ RegionCode, Name, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id, Active: true }
+    // Note: Model uses ID (uppercase)
+    const [updated] = await province.update({
+      RegionCode,
+      Name,
+      ModifyBy: req.user ? req.user.id : '1',
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, {
+      where: { ID: req.params.id, Active: true }
     });
     if (updated) {
       const updatedItem = await province.findByPk(req.params.id);
@@ -49,8 +65,12 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const [updated] = await province.update(
-      { Active: false, ModifyBy: req.user?.id ?? 1, ModifyDate: new Date() },
-      { where: { id: req.params.id, Active: true } }
+      {
+        Active: false,
+        ModifyBy: req.user ? req.user.id : '1',
+        ModifyDate: db.sequelize.fn('GETDATE')
+      },
+      { where: { ID: req.params.id, Active: true } }
     );
     if (updated) res.json({ message: "province deactivated" });
     else res.status(404).json({ message: "province not found" });

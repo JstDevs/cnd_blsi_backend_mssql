@@ -1,14 +1,25 @@
-const { Lgu } = require('../config/database');
-const lgu = Lgu;
+const db = require('../config/database');
+const lgu = db.Lgu;
 const path = require('path');
 
 
 exports.create = async (req, res) => {
   try {
     const { Code, Name, TIN, RDO, PhoneNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate } = req.body;
-    const item = await lgu.create({ Logo: logoPath, Code, Name, TIN, RDO, PhoneNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate });
+
+    // Sanitize dates - if empty string or invalid, use null or server date
+    const sanitizedCreatedDate = CreatedDate && CreatedDate !== '' ? new Date(CreatedDate) : db.sequelize.fn('GETDATE');
+    const sanitizedModifyDate = ModifyDate && ModifyDate !== '' ? new Date(ModifyDate) : null;
+
+    const item = await lgu.create({
+      Logo: null, Code, Name, TIN, RDO, PhoneNumber, EmailAddress, Website, StreetAddress,
+      BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, Active,
+      CreatedBy, CreatedDate: sanitizedCreatedDate,
+      ModifyBy, ModifyDate: sanitizedModifyDate
+    });
     res.status(201).json(item);
   } catch (err) {
+    console.error('LGU create error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -60,24 +71,54 @@ exports.update = async (req, res) => {
   try {
     let logoPath = null;
     if (req.file) {
-      logoPath = path.join(req.uploadPath, req.file.filename).replace(/\\/g, '/'); // ensure forward slashes
+      logoPath = req.file.filename; // Just the filename, consistent with how it's stored
     }
     const { Code, Name, TIN, RDO, PhoneNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode } = req.body;
-    const [updated] = await lgu.update({ Logo: logoPath, Code, Name, TIN, RDO, PhoneNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
-    });
-    if (updated) {
-      const updatedItem = await lgu.findByPk(req.params.id);
 
-      if (updatedItem.Logo) {
-        updatedItem.Logo = `${process.env.BASE_URL_SERVER}/uploads/${updatedItem.Logo}`; // Use BASE_URL_SERVER
+    // Check if record exists
+    let item = await lgu.findByPk(req.params.id);
+
+    if (!item) {
+      // If table is empty, create the first record
+      const count = await lgu.count();
+      if (count === 0) {
+        item = await lgu.create({
+          Logo: logoPath, Code, Name, TIN, RDO, PhoneNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode,
+          CreatedBy: req.user ? req.user.id : '1',
+          CreatedDate: db.sequelize.fn('GETDATE'),
+          Active: 1
+        });
+
+        // Append full URL for response object
+        const result = item.toJSON();
+        if (result.Logo) {
+          result.Logo = `${process.env.BASE_URL_SERVER}/uploads/${result.Logo}`;
+        }
+        return res.json(result);
+      } else {
+        return res.status(404).json({ message: "lgu not found" });
       }
-      res.json(updatedItem);
-    } else {
-      res.status(404).json({ message: "lgu not found" });
     }
 
+    // Update existing record
+    const updateData = {
+      Code, Name, TIN, RDO, PhoneNumber, EmailAddress, Website, StreetAddress, BarangayID, MunicipalityID, ProvinceID, RegionID, ZIPCode,
+      ModifyBy: req.user ? req.user.id : '1',
+      ModifyDate: db.sequelize.fn('GETDATE')
+    };
+    if (logoPath) updateData.Logo = logoPath;
+
+    await item.update(updateData);
+
+    const updatedItem = await lgu.findByPk(req.params.id);
+    const result = updatedItem.toJSON();
+    if (result.Logo) {
+      result.Logo = `${process.env.BASE_URL_SERVER}/uploads/${result.Logo}`;
+    }
+    res.json(result);
+
   } catch (err) {
+    console.error('LGU update error:', err);
     res.status(500).json({ error: err.message });
   }
 };

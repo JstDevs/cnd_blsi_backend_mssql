@@ -11,6 +11,10 @@ exports.user = async (req, res) => {
   try {
     const userID = req.user.employeeID;
 
+    if (!userID) {
+      return res.status(404).json({ message: 'No employee record linked to this user' });
+    }
+
     const user = await EmployeeModel.findOne({
       where: { ID: userID },
       include: [{
@@ -23,7 +27,7 @@ exports.user = async (req, res) => {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      return res.status(404).json({ message: 'User not found' });
     }
 
     return res.json(user);

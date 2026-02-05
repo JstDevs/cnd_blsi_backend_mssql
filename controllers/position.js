@@ -1,9 +1,17 @@
-const { position } = require('../config/database');
+const db = require('../config/database');
+const position = db.position;
 
 exports.create = async (req, res) => {
   try {
     const { Name } = req.body;
-    const item = await position.create({ Name, Active: true, CreatedBy: req.user.id, CreatedDate: new Date(), ModifyBy: req.user.id, ModifyDate: new Date() });
+    const item = await position.create({
+      Name,
+      Active: true,
+      CreatedBy: req.user ? req.user.id : '1',
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: req.user ? req.user.id : '1',
+      ModifyDate: db.sequelize.fn('GETDATE')
+    });
     res.status(201).json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -22,7 +30,8 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await position.findOne({ where: { id: req.params.id, Active: true } });
+    // Note: Model uses ID (uppercase)
+    const item = await position.findOne({ where: { ID: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "position not found" });
   } catch (err) {
@@ -33,8 +42,13 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { Name } = req.body;
-    const [updated] = await position.update({ Name, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id, Active: true }
+    // Note: Model uses ID (uppercase)
+    const [updated] = await position.update({
+      Name,
+      ModifyBy: req.user ? req.user.id : '1',
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, {
+      where: { ID: req.params.id, Active: true }
     });
     if (updated) {
       const updatedItem = await position.findByPk(req.params.id);
@@ -51,8 +65,12 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const [updated] = await position.update(
-      { Active: false, ModifyBy: req.user?.id ?? 1, ModifyDate: new Date() },
-      { where: { id: req.params.id, Active: true } }
+      {
+        Active: false,
+        ModifyBy: req.user ? req.user.id : '1',
+        ModifyDate: db.sequelize.fn('GETDATE')
+      },
+      { where: { ID: req.params.id, Active: true } }
     );
     if (updated) res.json({ message: "position deactivated" });
     else res.status(404).json({ message: "position not found" });

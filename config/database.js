@@ -50,23 +50,22 @@ console.log("  DB_PASSWORD:", process.env.DB_PASSWORD ? "***" : "NOT SET");
 
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
   host: process.env.DB_HOST || 'localhost',
-  dialect: 'mysql',
+  dialect: 'mssql', // Updated to mssql
   define: {
-    freezeTableName: true  // ⬅️ All models won't be pluralized
+    freezeTableName: true
   },
-  // dialect: 'mssql', // Use 'mssql' for Microsoft SQL Server
-  // dialect: 'mysql', // Use 'mysql' for MySQL
-  port: parseInt(process.env.DB_PORT, 10) || 3306, // Parse port as integer
+  port: parseInt(process.env.DB_PORT, 10) || 1433,
   pool: {
     max: 50,
     min: 0,
-    acquire: 30000, // ⬅️ 30 sec wait for connection
-    idle: 10000     // ⬅️ 10 sec before releasing idle
+    acquire: 30000,
+    idle: 10000
   },
-
   dialectOptions: {
-    connectTimeout: 60000, // ⬅️ 60 sec MySQL connection timeout
-    // MySQL-specific options (not SQL Server options)
+    options: {
+      trustServerCertificate: true, // Required for local/old servers
+      encrypt: false // Recommended for SQL 2014
+    }
   },
   logging: false
 });

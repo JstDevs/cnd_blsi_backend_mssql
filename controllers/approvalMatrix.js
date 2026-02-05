@@ -63,7 +63,7 @@ exports.create = async (req, res) => {
       where: { ID: matrix.ID },
       attributes: {
         include: [
-          [literal('`DocumentType`.`Name`'), 'DocumentTypeName'],
+          [literal('[DocumentType].[Name]'), 'DocumentTypeName'],
         ]
       },
       include: [
@@ -93,7 +93,7 @@ exports.getAll = async (req, res) => {
     const items = await ApprovalMatrix.findAll({
       attributes: {
         include: [
-          [literal('`DocumentType`.`Name`'), 'DocumentTypeName'],
+          [literal('[DocumentType].[Name]'), 'DocumentTypeName'],
         ]
       },
       include: [

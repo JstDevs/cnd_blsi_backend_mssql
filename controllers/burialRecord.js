@@ -284,7 +284,7 @@ const getAll = async (req, res) => {
       attributes: {
         include: [
           [
-            literal("CONCAT(`RequestedByEmployee`.`FirstName`, ' ', `RequestedByEmployee`.`MiddleName`, ' ', `RequestedByEmployee`.`LastName`)"),
+            literal("ISNULL([RequestedByEmployee].[FirstName], '') + ' ' + ISNULL([RequestedByEmployee].[MiddleName], '') + ' ' + ISNULL([RequestedByEmployee].[LastName], '')"),
             'RequestedByName'
           ],
         ]

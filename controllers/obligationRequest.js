@@ -328,9 +328,9 @@ exports.create = async (req, res) => {
       where: { ID: newRecord.ID },
       attributes: {
         include: [
-          [literal('`Department`.`Name`'), 'ResponsibilityCenterName'],
-          [literal('`FiscalYear`.`Name`'), 'FiscalYearName'],
-          [literal('`Project`.`Title`'), 'ProjectName'],
+          [literal('[Department].[Name]'), 'ResponsibilityCenterName'],
+          [literal('[FiscalYear].[Name]'), 'FiscalYearName'],
+          [literal('[Project].[Title]'), 'ProjectName'],
         ]
       },
       include: [
@@ -395,9 +395,9 @@ exports.getAll = async (req, res) => {
       where: whereClause,
       attributes: {
         include: [
-          [literal('`Department`.`Name`'), 'ResponsibilityCenterName'],
-          [literal('`FiscalYear`.`Name`'), 'FiscalYearName'],
-          [literal('`Project`.`Title`'), 'ProjectName'],
+          [literal('[Department].[Name]'), 'ResponsibilityCenterName'],
+          [literal('[FiscalYear].[Name]'), 'FiscalYearName'],
+          [literal('[Project].[Title]'), 'ProjectName'],
         ]
       },
       include: [

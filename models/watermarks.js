@@ -1,14 +1,18 @@
 const Sequelize = require('sequelize');
-module.exports = function(sequelize, DataTypes) {
+module.exports = function (sequelize, DataTypes) {
   return sequelize.define('Watermarks', {
     ID: {
-      autoIncrement: true,
+      autoIncrement: false,
       type: DataTypes.BIGINT,
       allowNull: false,
       primaryKey: true
     },
     DocumentID: {
       type: DataTypes.BIGINT,
+      allowNull: true
+    },
+    LGUName: {
+      type: DataTypes.STRING(250),
       allowNull: true
     },
     Confidential: {
@@ -18,7 +22,7 @@ module.exports = function(sequelize, DataTypes) {
   }, {
     sequelize,
     tableName: 'watermarks',
-  
+
     timestamps: false
   });
 };

@@ -15,7 +15,7 @@ const db = require('../config/database');
  *
  * @return {Object} - Created document type
  */
-/*******  947318de-441e-4a2d-b7b0-afb1ce296e26  *******/const {getAllWithAssociations}=require("../models/associatedDependency");
+/*******  947318de-441e-4a2d-b7b0-afb1ce296e26  *******/const { getAllWithAssociations } = require("../models/associatedDependency");
 
 exports.create = async (req, res) => {
   try {
@@ -50,7 +50,7 @@ exports.update = async (req, res) => {
   try {
     const { Code, Name, DocumentTypeCategoryID, Prefix, StartNumber, CurrentNumber, Suffix } = req.body;
     const [updated] = await documentType.update({ Code, Name, DocumentTypeCategoryID, Prefix, StartNumber, CurrentNumber, Suffix, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+      where: { ID: req.params.id }
     });
     if (updated) {
       const updatedItem = await documentType.findByPk(req.params.id);
@@ -74,7 +74,7 @@ exports.delete = async (req, res) => {
       { Active: false, ModifyBy: req.user.id, ModifyDate: new Date() },
       { where: { id: req.params.id, Active: true } }
     );
-    if (updated) res.json({ message: "DocumentType deactivated"})
+    if (updated) res.json({ message: "DocumentType deactivated" })
     else res.status(404).json({ message: "documentType not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });

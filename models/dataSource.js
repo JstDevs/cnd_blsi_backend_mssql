@@ -2,7 +2,7 @@ const Sequelize = require('sequelize');
 module.exports = function (sequelize, DataTypes) {
   return sequelize.define('DataSource', {
     ID: {
-      autoIncrement: true,
+      autoIncrement: false,
       type: DataTypes.BIGINT,
       allowNull: false,
       primaryKey: true

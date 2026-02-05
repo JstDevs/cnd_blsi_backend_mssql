@@ -6,10 +6,19 @@ const path = require('path');
 exports.create = async (req, res) => {
   try {
     const { InformationOne, InformationTwo, InformationThree, InformationFour, InformationFive, InformationSix, InformationSeven, InformationEight, InformationNine, InformationTen } = req.body;
-    const item = await datasource.create({ InformationOne, InformationTwo, InformationThree, InformationFour, InformationFive, InformationSix, InformationSeven, InformationEight, InformationNine, InformationTen });
+
+    // Manual ID increment
+    const maxItem = await datasource.findOne({ order: [['ID', 'DESC']] });
+    const nextID = (maxItem ? parseInt(maxItem.ID) : 0) + 1;
+
+    const item = await datasource.create({
+      ID: nextID,
+      InformationOne, InformationTwo, InformationThree, InformationFour, InformationFive, InformationSix, InformationSeven, InformationEight, InformationNine, InformationTen
+    });
     res.status(201).json(item);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('DataSource create error:', err);
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 };
 
@@ -34,8 +43,12 @@ exports.getAll = async (req, res) => {
     console.log('GET /dataSource - Success');
     res.json(data);
   } catch (err) {
-    console.error('GET /dataSource - Error:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('GET /dataSource - Error:', err);
+    res.status(500).json({
+      error: err.message,
+      stack: err.stack,
+      sql: err.parent ? err.parent.sql : null
+    });
   }
 };
 

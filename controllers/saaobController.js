@@ -1,14 +1,14 @@
 const { sequelize, Fund, Department } = require('../config/database');
 const { Op, fn, col, where, literal, Sequelize } = require('sequelize');
 const { Budget, ChartofAccounts, AccountCategory, Funds, FiscalYear, LGU, Municipality, Province, employee, Position } = require('../config/database');
-const db=require("../config/database")
+const db = require("../config/database")
 // 🔹 GET /api/reports/saaob
 exports.getSAAOB = async (req, res) => {
   const { startDate, endDate, fiscalYearID, fundID, userID } = req.query;
 
-   try {
-        const result = await Budget.findAll({
-       attributes: [
+  try {
+    const result = await Budget.findAll({
+      attributes: [
         [Sequelize.literal(`CASE WHEN '${fundID}' = '%' THEN 'All Funds' ELSE \`Funds\`.\`Name\` END`), 'Funds'],
         [Sequelize.literal(`'${endDate}'`), 'Year'],
         [Sequelize.col('FiscalYear.MonthEnd'), 'MonthEnd'],
@@ -35,80 +35,80 @@ exports.getSAAOB = async (req, res) => {
         [Sequelize.literal(`COALESCE(SUM(Budget.Released) - SUM(Budget.Charges), 0)`), 'UnobligatedAllotment'],
         [Sequelize.fn('UPPER', Sequelize.col('LGU.Municipality.Name')), 'Municipality'],
         [Sequelize.col('LGU.Province.Name'), 'Province'],
-        [Sequelize.literal(`CONCAT(Employee.FirstName, ' ', LEFT(Employee.MiddleName, 1), '. ', Employee.LastName)`), 'RequestedBy'],
+        [Sequelize.literal("ISNULL([Employee].[FirstName], '') + ' ' + LEFT(ISNULL([Employee].[MiddleName], ''), 1) + '. ' + ISNULL([Employee].[LastName], '')"), 'RequestedBy'],
         [Sequelize.col('Employee.Position.Name'), 'Position']
       ],
-        include: [
+      include: [
+        {
+          model: ChartofAccounts,
+          as: "ChartofAccounts",
+
+          include: [
             {
-            model: ChartofAccounts,
-            as:"ChartofAccounts",
-        
-            include: [
-                {
-                model: AccountCategory,
-                as:"AccountCategory",
-              
-                }
-            ],
-              where: {
-                AccountTypeID: 1
-              }
-            },
-            {
-            model: Funds,
-            as:"Funds",
-           
-            },
-            {
-            model: FiscalYear,
-            as:"FiscalYear",
-            
-            },
-            {
-            model: db.Lgu,
-            as:"Lgu",
-            
-            where: { ID: 1 },
-            include: [
-                {
-                model: db.municipality,
-                as:"Municipality",
-               
-                },
-                {
-                model: db.province,
-                as:"Province",
-                
-                }
-            ]
-            },
-            {
-            model:employee,
-            as:"Employee",
-           
-            where: { ID: userID },
-            include: [
-                {
-                model: db.position,
-                as:"Position",
-               
-                }
-            ]
+              model: AccountCategory,
+              as: "AccountCategory",
+
             }
-        ]  ,
-           where: {
+          ],
+          where: {
+            AccountTypeID: 1
+          }
+        },
+        {
+          model: Funds,
+          as: "Funds",
+
+        },
+        {
+          model: FiscalYear,
+          as: "FiscalYear",
+
+        },
+        {
+          model: db.Lgu,
+          as: "Lgu",
+
+          where: { ID: 1 },
+          include: [
+            {
+              model: db.municipality,
+              as: "Municipality",
+
+            },
+            {
+              model: db.province,
+              as: "Province",
+
+            }
+          ]
+        },
+        {
+          model: employee,
+          as: "Employee",
+
+          where: { ID: userID },
+          include: [
+            {
+              model: db.position,
+              as: "Position",
+
+            }
+          ]
+        }
+      ],
+      where: {
         FiscalYearID: fiscalYearID,
         CreatedDate: {
           [Op.between]: [startDate, endDate]
         },
         [Op.and]: Sequelize.where(
-          Sequelize.fn('CONCAT', Sequelize.col('Budget.FundID'), ''),
+          Sequelize.cast(Sequelize.col('Budget.FundID'), 'VARCHAR'),
           {
             [Op.like]: fundID
           }
         )
       },
-            group: [
+      group: [
         'Funds.Name',
         'FiscalYear.Year',
         'FiscalYear.MonthEnd',
@@ -126,7 +126,7 @@ exports.getSAAOB = async (req, res) => {
       ],
       order: [['ChartofAccountsID', 'ASC']],
       // raw:true
-        });
+    });
 
     res.json(result);
   } catch (error) {
@@ -140,7 +140,7 @@ exports.getSAO = async (req, res) => {
   const { startDate, endDate, depID, fiscalYearID, fundID } = req.query;
 
   try {
-     const results = await db.TransactionTable.findAll({
+    const results = await db.TransactionTable.findAll({
       attributes: [
         ['InvoiceDate', 'Date'],
         ['InvoiceNumber', 'ObligationRequestNumber'],
@@ -161,45 +161,45 @@ exports.getSAO = async (req, res) => {
       include: [
         {
           model: db.TransactionItems,
-          as:"TransactionItems",
+          as: "TransactionItems",
           include: [
             {
               model: db.Item,
-              as:"Item"
+              as: "Item"
               // attributes: []
             }
           ]
         },
         {
           model: db.Budget,
-          as:"Budget",
+          as: "Budget",
 
           where: {
             DepartmentID: depID,
             FiscalYearID: fiscalYearID
           },
-          include:{
-          model: db.Lgu,
-          as:"Lgu",
-          where: { ID: 1 },
-          include: [
-            {
-              model: db.municipality,
-              as:"Municipality"
-            
-            }
-          ]
-        }
+          include: {
+            model: db.Lgu,
+            as: "Lgu",
+            where: { ID: 1 },
+            include: [
+              {
+                model: db.municipality,
+                as: "Municipality"
+
+              }
+            ]
+          }
         },
         {
           model: db.Funds,
-          as:"sourceFunds",
+          as: "sourceFunds",
           where: {
             ID: fundID
           }
         },
-       
-        
+
+
       ],
       // raw: true
     });

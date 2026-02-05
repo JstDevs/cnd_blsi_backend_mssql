@@ -627,8 +627,8 @@ exports.create = async (req, res) => {
       where: { ID: newRecord.ID },
       attributes: {
         include: [
-          [literal('`FiscalYear`.`Name`'), 'FiscalYearName'],
-          [literal('`Project`.`Title`'), 'ProjectName'],
+          [literal('[FiscalYear].[Name]'), 'FiscalYearName'],
+          [literal('[Project].[Title]'), 'ProjectName'],
         ]
       },
       include: [
@@ -903,8 +903,8 @@ exports.getAll = async (req, res) => {
       where: whereClause,
       attributes: {
         include: [
-          [literal('`FiscalYear`.`Name`'), 'FiscalYearName'],
-          [literal('`Project`.`Title`'), 'ProjectName'],
+          [literal('[FiscalYear].[Name]'), 'FiscalYearName'],
+          [literal('[Project].[Title]'), 'ProjectName'],
         ]
       },
       include: [
@@ -1036,7 +1036,7 @@ exports.approveTransaction = async (req, res) => {
 
       for (const [chargeId, updates] of Object.entries(budgetUpdates)) {
         await BudgetModel.update({
-          PreEncumbrance: literal(`GREATEST(0, CAST(PreEncumbrance AS DECIMAL(18,2)) - ${updates.pre})`),
+          PreEncumbrance: literal(`CASE WHEN (CAST(PreEncumbrance AS DECIMAL(18,2)) - ${updates.pre}) < 0 THEN 0 ELSE (CAST(PreEncumbrance AS DECIMAL(18,2)) - ${updates.pre}) END`),
           Encumbrance: literal(`CAST(Encumbrance AS DECIMAL(18,2)) + ${updates.enc}`)
         }, { where: { ID: chargeId }, transaction: t });
       }

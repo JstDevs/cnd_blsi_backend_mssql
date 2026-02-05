@@ -209,11 +209,11 @@ function initModels(sequelize) {
   Signatories.belongsTo(documentType, { as: "DocumentType", foreignKey: "DocumentTypeID" });
   documentType.hasMany(Signatories, { as: "Signatories", foreignKey: "DocumentTypeID" });
 
-  Signatories.belongsTo(employee, { as: "SignatoryOne", foreignKey: "EmployeeOne" });
-  Signatories.belongsTo(employee, { as: "SignatoryTwo", foreignKey: "EmployeeTwo" });
-  Signatories.belongsTo(employee, { as: "SignatoryThree", foreignKey: "EmployeeThree" });
-  Signatories.belongsTo(employee, { as: "SignatoryFour", foreignKey: "EmployeeFour" });
-  Signatories.belongsTo(employee, { as: "SignatoryFive", foreignKey: "EmployeeFive" });
+  Signatories.belongsTo(employee, { as: "Signatory", foreignKey: "EmployeeID" });
+  // Signatories.belongsTo(employee, { as: "SignatoryTwo", foreignKey: "EmployeeTwo" });
+  // Signatories.belongsTo(employee, { as: "SignatoryThree", foreignKey: "EmployeeThree" });
+  // Signatories.belongsTo(employee, { as: "SignatoryFour", foreignKey: "EmployeeFour" });
+  // Signatories.belongsTo(employee, { as: "SignatoryFive", foreignKey: "EmployeeFive" });
 
   BudgetChange.belongsTo(BudgetType, { as: "BudgetType", foreignKey: "BudgetTypeID" });
   BudgetType.hasMany(BudgetChange, { as: "BudgetChanges", foreignKey: "BudgetTypeID" });

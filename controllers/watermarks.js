@@ -1,36 +1,53 @@
-const { Watermarks, sequelize } = require('../config/database');
-const watermarks = Watermarks;
+const db = require('../config/database');
+const watermarks = db.Watermarks;
 const path = require('path');
 
 
 exports.create = async (req, res) => {
   try {
     const { DocumentID, Confidential } = req.body;
-    const item = await watermarks.create({ DocumentID, Confidential });
+
+    // Manual ID increment
+    const maxItem = await watermarks.findOne({ order: [['ID', 'DESC']] });
+    const nextID = (maxItem ? parseInt(maxItem.ID) : 0) + 1;
+
+    const item = await watermarks.create({
+      ID: nextID,
+      DocumentID,
+      Confidential
+    });
     res.status(201).json(item);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Watermarks create error:', err);
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 };
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await watermarks.findAll({
-      include: [
-        {
-          model: sequelize.models.DocumentType,
-          as: 'DocumentType',
-          attributes: ['Name']
-        }
-      ],
-      order: [[{ model: sequelize.models.DocumentType, as: 'DocumentType' }, 'Name', 'ASC']],
+    const docTypes = await db.documentType.findAll({
+      order: [['Name', 'ASC']],
     });
 
-    console.log(`GET /watermarks - Success, found ${items.length} records`);
-    res.json(items);
+    const watermarkSettings = await watermarks.findAll();
+
+    const results = docTypes.map(doc => {
+      const setting = watermarkSettings.find(w => w.DocumentID == doc.ID);
+      return {
+        ID: setting ? setting.ID : `new-${doc.ID}`,
+        DocumentID: doc.ID,
+        Confidential: setting ? setting.Confidential : 0,
+        DocumentType: { Name: doc.Name }
+      };
+    });
+
+    res.json(results);
   } catch (err) {
-    console.error('GET /watermarks - Error:', err.message);
-    res.status(500).json({ error: err.message });
+    console.error('GET /watermarks - Error:', err);
+    res.status(500).json({
+      error: err.message,
+      sql: err.parent ? err.parent.sql : null
+    });
   }
 };
 
@@ -48,17 +65,35 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { DocumentID, Confidential } = req.body;
+    const id = req.params.id;
+
+    if (id.startsWith('new-')) {
+      // Create new record
+      const actualDocID = id.split('-')[1];
+      const maxItem = await watermarks.findOne({ order: [['ID', 'DESC']] });
+      const nextID = (maxItem ? parseInt(maxItem.ID) : 0) + 1;
+
+      const item = await watermarks.create({
+        ID: nextID,
+        DocumentID: actualDocID,
+        Confidential
+      });
+      return res.json(item);
+    }
+
     const [updated] = await watermarks.update({ DocumentID, Confidential }, {
-      where: { ID: req.params.id }
+      where: { ID: id }
     });
+
     if (updated) {
-      const updatedItem = await watermarks.findByPk(req.params.id);
+      const updatedItem = await watermarks.findByPk(id);
       res.json(updatedItem);
     } else {
       res.status(404).json({ message: "watermarks not found" });
     }
 
   } catch (err) {
+    console.error('Watermarks update error:', err);
     res.status(500).json({ error: err.message });
   }
 };

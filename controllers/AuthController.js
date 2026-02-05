@@ -3,9 +3,9 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
-const db=require('../config/database'); // Adjust the path as necessary
+const db = require('../config/database'); // Adjust the path as necessary
 const Users = db.users
-const UserAccess=db.userAccess
+const UserAccess = db.userAccess
 const requireAuth = require('../middleware/requireAuth'); // Assuming you have a middleware for authentication
 const { access } = require('fs-extra');
 const router = express.Router();
@@ -31,7 +31,7 @@ const verifyPassword = async (password, hashedPassword) => {
 // Generate JWT token
 const generateToken = (user) => {
     return jwt.sign(
-        { 
+        {
             id: user.ID,
             userName: user.UserName,
             userAccessIDs: user.accessList ? user.accessList.map(access => access.ID) : [],
@@ -108,7 +108,7 @@ const verifyToken = (token) => {
 //                 userName,
 //                 message: null
 //             });
-          
+
 //         }
 
 //         // Verify password
@@ -122,7 +122,7 @@ const verifyToken = (token) => {
 //                 message: null
 //             });
 //         }
- 
+
 //         // Create user session data
 //         const sessionUser = {
 //             id: user.ID,
@@ -142,7 +142,7 @@ const verifyToken = (token) => {
 //         let token = null;
 //         if (1) {
 //             token = generateToken(user);
-            
+
 //             // Set JWT as httpOnly cookie
 //             res.cookie('authToken', token, {
 //                 httpOnly: true,
@@ -187,7 +187,7 @@ router.login = async (req, res) => {
     try {
         const { userName, password, rememberMe } = req.body;
 
-        if(!userName || !password) {
+        if (!userName || !password) {
             return res.json({
                 status: false,
                 errors: { general: 'Username and password are required.' },
@@ -220,10 +220,10 @@ router.login = async (req, res) => {
             include: [
                 {
                     model: UserAccess,
-                    include:[
+                    include: [
                         {
-                            model:db.ModuleAccess,
-                            as:"ModuleAccesses"
+                            model: db.ModuleAccess,
+                            as: "ModuleAccesses"
                         }
                     ],
                     as: 'accessList'
@@ -236,7 +236,6 @@ router.login = async (req, res) => {
             ]
         });
 
-        
         if (!user) {
             return res.json({
                 status: false,
@@ -244,12 +243,13 @@ router.login = async (req, res) => {
                 userName,
                 message: null
             });
-          
+
         }
 
 
         // Verify password
         const isValidPassword = await verifyPassword(password, user.Password);
+
         if (!isValidPassword) {
             return res.json({
                 status: false,
@@ -313,7 +313,7 @@ router.login = async (req, res) => {
         // const token = generateJwtForUser(userPlain); // replace with your current token code
 
 
- 
+
         // Create user session data
         // const sessionUser = {
         //     id: user.ID,
@@ -328,7 +328,7 @@ router.login = async (req, res) => {
         // let token = null;
         if (1) {
             token = generateToken(user);
-            
+
             // Set JWT as httpOnly cookie
             res.cookie('authToken', token, {
                 httpOnly: true,
@@ -345,7 +345,7 @@ router.login = async (req, res) => {
         );
 
         // Redirect to intended page or dashboard
-       return res.json({
+        return res.json({
             status: true,
             user: user,
             token: token, // Include token in response if needed
@@ -357,7 +357,7 @@ router.login = async (req, res) => {
         console.error('Login error:', error);
         res.json({
             status: false,
-            errors: { general: 'An error occurred during login. Please try again.',error:error.message },
+            errors: { general: 'An error occurred during login. Please try again.', error: error.message },
             userName: req.body.userName,
             message: null
         });
@@ -391,7 +391,7 @@ router.login = async (req, res) => {
 //         const { userName, password, employeeID,userAccessArray } = req.body;
 
 //         let validationErrors = {};
-        
+
 //         if (!errors.isEmpty()) {
 //             errors.array().forEach(error => {
 //                 validationErrors[error.param] = error.msg;
@@ -453,13 +453,13 @@ router.login = async (req, res) => {
 //         });
 //     }
 // });
-router.register = async(req, res) => {
+router.register = async (req, res) => {
     try {
         const errors = validationResult(req);
         const { userName, password, employeeID, userAccessArray } = req.body;
 
         let validationErrors = {};
-        
+
         if (!errors.isEmpty()) {
             errors.array().forEach(error => {
                 validationErrors[error.param] = error.msg;
@@ -476,7 +476,7 @@ router.register = async(req, res) => {
         }
 
         if (Object.keys(validationErrors).length > 0) {
-            return res.json( {
+            return res.json({
                 errors: validationErrors,
                 user: req.body,
                 message: null
@@ -498,24 +498,24 @@ router.register = async(req, res) => {
             CreatedDate: new Date()
         });
         let parseArray;
-        try{
-            parseArray=JSON.parse(userAccessArray)
-        }catch{
-            parseArray=userAccessArray
+        try {
+            parseArray = JSON.parse(userAccessArray)
+        } catch {
+            parseArray = userAccessArray
         }
-        for(let i=0;i<parseArray.length;i++){
-            console.log("userAccessArray=====>",parseArray[i])
+        for (let i = 0; i < parseArray.length; i++) {
+            console.log("userAccessArray=====>", parseArray[i])
             await db.UserUserAccess.create({
-                UserID:newUser.ID,
-                UserAccessID:parseArray[i]
+                UserID: newUser.ID,
+                UserAccessID: parseArray[i]
             })
         }
-        res.json({status:true});
+        res.json({ status: true });
 
     } catch (error) {
         console.error('Registration error:', error);
-        res.json( {
-            errors: { general: 'An error occurred during registration. Please try again.',error:error.message },
+        res.json({
+            errors: { general: 'An error occurred during registration. Please try again.', error: error.message },
             user: req.body,
             message: null
         });
@@ -541,7 +541,7 @@ router.get('/profile', requireAuth, async (req, res) => {
             return res.redirect('/auth/login');
         }
 
-        res.json( {
+        res.json({
             user: {
                 ...user.toJSON(),
                 userAccessArray: user.userAccessArray ? JSON.parse(user.userAccessArray) : [],
@@ -582,7 +582,7 @@ router.post('/change-password', [
                 validationErrors[error.param] = error.msg;
             });
 
-            return res.json( {
+            return res.json({
                 errors: validationErrors,
                 username: req.user.username
             });
@@ -592,15 +592,15 @@ router.post('/change-password', [
         const user = await Users.findByPk(req.user.id);
         if (!user) {
             return res.json({
-                status:false,
-                message:"user not found"
+                status: false,
+                message: "user not found"
             })
         }
 
         // Verify current password
         const isValidPassword = await verifyPassword(currentPassword, user.Password);
         if (!isValidPassword) {
-            return res.json( {
+            return res.json({
                 errors: { currentPassword: 'Current password is incorrect' },
                 username: req.user.username
             });
@@ -615,7 +615,7 @@ router.post('/change-password', [
             { where: { ID: user.ID } }
         );
 
-        res.json( {
+        res.json({
             errors: {},
             success: 'Password changed successfully',
             username: req.user.username

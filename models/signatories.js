@@ -2,7 +2,7 @@ const Sequelize = require('sequelize');
 module.exports = function (sequelize, DataTypes) {
   return sequelize.define('Signatories', {
     ID: {
-      autoIncrement: true,
+      autoIncrement: false,
       type: DataTypes.BIGINT,
       allowNull: false,
       primaryKey: true
@@ -11,24 +11,12 @@ module.exports = function (sequelize, DataTypes) {
       type: DataTypes.BIGINT,
       allowNull: true
     },
-    EmployeeOne: {
+    EmployeeID: {
       type: DataTypes.BIGINT,
       allowNull: true
     },
-    EmployeeTwo: {
-      type: DataTypes.BIGINT,
-      allowNull: true
-    },
-    EmployeeThree: {
-      type: DataTypes.BIGINT,
-      allowNull: true
-    },
-    EmployeeFour: {
-      type: DataTypes.BIGINT,
-      allowNull: true
-    },
-    EmployeeFive: {
-      type: DataTypes.BIGINT,
+    SequenceNumber: {
+      type: DataTypes.INTEGER,
       allowNull: true
     },
   }, {

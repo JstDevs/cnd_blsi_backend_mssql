@@ -27,18 +27,20 @@ exports.getAll = async (req, res) => {
       order: [['ID', 'DESC']],
     });
 
-    if (!latest) return res.status(404).json({ message: 'No LGU found' });
+    if (!latest) return res.json({}); // Return empty object instead of 404
 
     // Convert Sequelize instance to plain object
     const data = latest.toJSON();
 
     // Append full URL to logo if it exists
     if (data.Logo) {
-      data.Logo = `${process.env.BASE_URL_SERVER}/uploads/${data.Logo}`; // full path to logo
+      // Use process.env.BASE_URL_SERVER which is for the backend
+      data.Logo = `${process.env.BASE_URL_SERVER}/uploads/${data.Logo}`;
     }
 
     res.json(data);
   } catch (err) {
+    console.error('LGU getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -68,7 +70,7 @@ exports.update = async (req, res) => {
       const updatedItem = await lgu.findByPk(req.params.id);
 
       if (updatedItem.Logo) {
-        updatedItem.Logo = `${process.env.BASE_URL}/uploads/${updatedItem.Logo}`; // full path to logo
+        updatedItem.Logo = `${process.env.BASE_URL_SERVER}/uploads/${updatedItem.Logo}`; // Use BASE_URL_SERVER
       }
       res.json(updatedItem);
     } else {

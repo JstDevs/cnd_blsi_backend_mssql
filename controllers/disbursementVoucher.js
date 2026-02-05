@@ -654,7 +654,11 @@ exports.selectListForDV = async (req, res) => {
     res.json(results);
   } catch (err) {
     console.error('Fetch error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: 'Internal server error',
+      message: err.message,
+      sql: err.sql
+    });
   }
 };
 
@@ -747,7 +751,11 @@ exports.getAll = async (req, res) => {
     res.status(200).json(data);
   } catch (err) {
     console.error("Error loading disbursement vouchers:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: 'Internal server error',
+      message: err.message,
+      sql: err.sql
+    });
   }
 };
 
@@ -794,7 +802,11 @@ exports.getPendingChequeDVs = async (req, res) => {
     res.status(200).json(data);
   } catch (err) {
     console.error("Error loading pending cheque DVs:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: 'Internal server error',
+      message: err.message,
+      sql: err.sql
+    });
   }
 };
 

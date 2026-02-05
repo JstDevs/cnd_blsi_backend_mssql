@@ -258,12 +258,12 @@ exports.getAll = async (req, res) => {
         include: [
           // Flatten full name of RequestedBy
           [
-            literal("CONCAT(`RequestedByEmployee`.`FirstName`, ' ', `RequestedByEmployee`.`MiddleName`, ' ', `RequestedByEmployee`.`LastName`)"),
+            literal("CONCAT([RequestedByEmployee].[FirstName], ' ', [RequestedByEmployee].[MiddleName], ' ', [RequestedByEmployee].[LastName])"),
             'RequestedByName'
           ],
           // Flatten fund fields
-          [literal('`Funds`.`Code`'), 'FundsCode'],
-          [literal('`Funds`.`Name`'), 'FundsName']
+          [literal('[Funds].[Code]'), 'FundsCode'],
+          [literal('[Funds].[Name]'), 'FundsName']
         ]
       },
       include: [
@@ -305,11 +305,11 @@ exports.getById = async (req, res) => {
       attributes: {
         include: [
           [
-            literal("CONCAT(`RequestedByEmployee`.`FirstName`, ' ', `RequestedByEmployee`.`MiddleName`, ' ', `RequestedByEmployee`.`LastName`)"),
+            literal("CONCAT([RequestedByEmployee].[FirstName], ' ', [RequestedByEmployee].[MiddleName], ' ', [RequestedByEmployee].[LastName])"),
             'RequestedByName'
           ],
-          [literal('`Funds`.`Code`'), 'FundsCode'],
-          [literal('`Funds`.`Name`'), 'FundsName']
+          [literal('[Funds].[Code]'), 'FundsCode'],
+          [literal('[Funds].[Name]'), 'FundsName']
         ]
       },
       include: [
@@ -317,7 +317,7 @@ exports.getById = async (req, res) => {
           model: JournalEntryVoucherModel,
           as: 'JournalEntries',
           required: false,
-          where: literal('`JournalEntries`.`LinkID` = `TransactionTable`.`LinkID`')
+          where: literal('[JournalEntries].[LinkID] = [TransactionTable].[LinkID]')
         },
         { model: AttachmentModel, as: 'Attachments', required: false },
         { model: EmployeeModel, as: 'RequestedByEmployee', required: false },
@@ -511,12 +511,12 @@ exports.update = async (req, res) => {
     //   attributes: {
     //     include: [
     //       [
-    //         literal("CONCAT(`RequestedByEmployee`.`FirstName`, ' ', `RequestedByEmployee`.`MiddleName`, ' ', `RequestedByEmployee`.`LastName`)"),
+    //         literal("CONCAT([RequestedByEmployee].[FirstName], ' ', [RequestedByEmployee].[MiddleName], ' ', [RequestedByEmployee].[LastName])"),
     //         'RequestedByName'
     //       ],
     //       // Flatten fund fields
-    //       [literal('`Funds`.`Code`'), 'FundsCode'],
-    //       [literal('`Funds`.`Name`'), 'FundsName']
+    //       [literal('[Funds].[Code]'), 'FundsCode'],
+    //       [literal('[Funds].[Name]'), 'FundsName']
     //     ]
     //   },
     //   include: [

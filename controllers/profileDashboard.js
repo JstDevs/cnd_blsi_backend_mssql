@@ -116,8 +116,12 @@ exports.userDocumentsList = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error:', err);
-    res.status(500).json({ error: err.message });
+    console.error('Error fetching data:', err);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: err.message,
+      sql: err.sql
+    });
   }
 };
 
@@ -184,19 +188,19 @@ exports.disbursementAmounts = async (req, res) => {
     let dateCondition = {};
     switch (dateRange || 'Day') {
       case 'Year':
-        dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()')));
+        dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()')));
         break;
       case 'Month':
         dateCondition = {
           [Op.and]: [
-            where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('NOW()'))),
-            where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()')))
+            where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('GETDATE()'))),
+            where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()')))
           ]
         };
         break;
       case 'Day':
       default:
-        dateCondition = where(fn('DATE', col('InvoiceDate')), fn('CURDATE'));
+        dateCondition = where(literal('CAST([InvoiceDate] AS DATE)'), literal('CAST(GETDATE() AS DATE)'));
         break;
     }
 
@@ -221,21 +225,19 @@ exports.disbursementAmounts = async (req, res) => {
       );
     }
 
-    // 4. Query total (NO include to avoid SELECTing all employee fields)
-    const result = await TransactionTableModel.unscoped().findOne({
-      attributes: [[fn('SUM', col('Total')), 'TotalSum']],
+    // 4. Query total using .sum() for MSSQL compatibility
+    const totalSum = await TransactionTableModel.unscoped().sum('Total', {
       where: whereClause,
       include: [
         {
           model: EmployeeModel,
           as: 'RequestedByEmployee',
-          attributes: [] // exclude fields to avoid full group by conflict
+          attributes: []
         }
-      ],
-      raw: true
+      ]
     });
 
-    const total = result?.TotalSum ? parseFloat(result.TotalSum).toFixed(2) : '0.00';
+    const total = totalSum ? parseFloat(totalSum).toFixed(2) : '0.00';
     res.json({ total: `${Number(total).toLocaleString(undefined, { minimumFractionDigits: 2 })}` });
 
   } catch (error) {
@@ -252,19 +254,19 @@ exports.obligationChart = async (req, res) => {
     let dateCondition = {};
     switch (dateRange) {
       case 'Year':
-        dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()')));
+        dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()')));
         break;
       case 'Month':
         dateCondition = {
           [Op.and]: [
-            where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('NOW()'))),
-            where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()')))
+            where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('GETDATE()'))),
+            where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()')))
           ]
         };
         break;
       case 'Day':
       default:
-        dateCondition = where(fn('DATE', col('InvoiceDate')), fn('CURDATE'));
+        dateCondition = where(literal('CAST([InvoiceDate] AS DATE)'), literal('CAST(GETDATE() AS DATE)'));
         break;
     }
 
@@ -353,19 +355,19 @@ exports.travelOrderChart = async (req, res) => {
     let dateCondition = {};
     switch (dateRange) {
       case 'Year':
-        dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()')));
+        dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()')));
         break;
       case 'Month':
         dateCondition = {
           [Op.and]: [
-            where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('NOW()'))),
-            where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()')))
+            where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('GETDATE()'))),
+            where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()')))
           ]
         };
         break;
       case 'Day':
       default:
-        dateCondition = where(fn('DATE', col('InvoiceDate')), fn('CURDATE'));
+        dateCondition = where(literal('CAST([InvoiceDate] AS DATE)'), literal('CAST(GETDATE() AS DATE)'));
         break;
     }
 
@@ -435,19 +437,19 @@ exports.disbursementChart = async (req, res) => {
     let dateCondition = {};
     switch (dateRange) {
       case 'Year':
-        dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()')));
+        dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()')));
         break;
       case 'Month':
         dateCondition = {
           [Op.and]: [
-            where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('NOW()'))),
-            where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()')))
+            where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('GETDATE()'))),
+            where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()')))
           ]
         };
         break;
       case 'Day':
       default:
-        dateCondition = where(fn('DATE', col('InvoiceDate')), fn('CURDATE'));
+        dateCondition = where(literal('CAST([InvoiceDate] AS DATE)'), literal('CAST(GETDATE() AS DATE)'));
         break;
     }
 
@@ -555,30 +557,30 @@ exports.collectionTotals = async (req, res) => {
     if (startDate && endDate) {
       dateCondition = {
         [Op.and]: [
-          where(fn('DATE', col('InvoiceDate')), { [Op.gte]: startDate }),
-          where(fn('DATE', col('InvoiceDate')), { [Op.lte]: endDate })
+          where(literal('CAST([InvoiceDate] AS DATE)'), { [Op.gte]: startDate }),
+          where(literal('CAST([InvoiceDate] AS DATE)'), { [Op.lte]: endDate })
         ]
       };
     } else if (startDate) {
-      dateCondition = where(fn('DATE', col('InvoiceDate')), { [Op.gte]: startDate });
+      dateCondition = where(literal('CAST([InvoiceDate] AS DATE)'), { [Op.gte]: startDate });
     } else if (endDate) {
-      dateCondition = where(fn('DATE', col('InvoiceDate')), { [Op.lte]: endDate });
+      dateCondition = where(literal('CAST([InvoiceDate] AS DATE)'), { [Op.lte]: endDate });
     } else {
       switch (dateRange) {
         case 'Year':
-          dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()')));
+          dateCondition = where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()')));
           break;
         case 'Month':
           dateCondition = {
             [Op.and]: [
-              where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('NOW()'))),
-              where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('NOW()')))
+              where(fn('YEAR', col('InvoiceDate')), fn('YEAR', literal('GETDATE()'))),
+              where(fn('MONTH', col('InvoiceDate')), fn('MONTH', literal('GETDATE()')))
             ]
           };
           break;
         case 'Day':
         default:
-          dateCondition = where(fn('DATE', col('InvoiceDate')), fn('CURDATE'));
+          dateCondition = where(literal('CAST([InvoiceDate] AS DATE)'), literal('CAST(GETDATE() AS DATE)'));
           break;
       }
     }
@@ -606,16 +608,14 @@ exports.collectionTotals = async (req, res) => {
       receiptTypes = allReceiptTypes.filter(rt => categoryArray.includes(rt.key));
     }
 
-    // 4. Perform queries in parallel
+    // 4. Perform queries in parallel using .sum() for MSSQL compatibility
     const totals = await Promise.all(
       receiptTypes.map(({ apar }) =>
-        TransactionTableModel.unscoped().findOne({
-          attributes: [[fn('SUM', col('Total')), 'Total']],
+        TransactionTableModel.unscoped().sum('Total', {
           where: {
             ...commonConditions,
             APAR: apar
-          },
-          raw: true
+          }
         })
       )
     );
@@ -627,7 +627,7 @@ exports.collectionTotals = async (req, res) => {
     let total = 0;
 
     receiptTypes.forEach(({ label }, index) => {
-      const amount = parseFloat(totals[index]?.Total || 0);
+      const amount = parseFloat(totals[index] || 0);
       result[label] = amount.toFixed(2);
       total += amount;
     });
@@ -638,7 +638,11 @@ exports.collectionTotals = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching receipt totals:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+      sql: error.sql // This will show the failed SQL query
+    });
   }
 };
 
@@ -647,18 +651,18 @@ exports.collectionCharts = (receiptType) => {
     try {
       const results = await TransactionTableModel.unscoped().findAll({
         attributes: [
-          [fn('DATE', col('InvoiceDate')), 'Date'],
+          [literal('CAST([InvoiceDate] AS DATE)'), 'Date'],
           [fn('SUM', col('Total')), 'Total']
         ],
         where: {
           APAR: receiptType,
           Status: 'Posted',
           InvoiceDate: {
-            [Op.gte]: literal('DATE_SUB(CURDATE(), INTERVAL 5 DAY)')
+            [Op.gte]: literal("DATEADD(day, -5, CAST(GETDATE() AS DATE))")
           }
         },
-        group: [fn('DATE', col('InvoiceDate'))],
-        order: [[fn('DATE', col('InvoiceDate')), 'ASC']],
+        group: [literal('CAST([InvoiceDate] AS DATE)')],
+        order: [[literal('CAST([InvoiceDate] AS DATE)'), 'ASC']],
         raw: true
       });
 
@@ -688,18 +692,18 @@ exports.collectionBarCharts = (receiptType) => {
     try {
       const results = await TransactionTableModel.unscoped().findAll({
         attributes: [
-          [fn('DATE', col('InvoiceDate')), 'Date'],
+          [literal('CAST([InvoiceDate] AS DATE)'), 'Date'],
           [fn('SUM', col('Total')), 'Total']
         ],
         where: {
           APAR: receiptType,
           Status: 'Posted',
           InvoiceDate: {
-            [Op.gte]: literal('DATE_SUB(CURDATE(), INTERVAL 5 DAY)')
+            [Op.gte]: literal("DATEADD(day, -5, CAST(GETDATE() AS DATE))")
           }
         },
-        group: [fn('DATE', col('InvoiceDate'))],
-        order: [[fn('DATE', col('InvoiceDate')), 'ASC']],
+        group: [literal('CAST([InvoiceDate] AS DATE)')],
+        order: [[literal('CAST([InvoiceDate] AS DATE)'), 'ASC']],
         raw: true
       });
 

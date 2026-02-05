@@ -63,7 +63,7 @@ exports.saveTransaction = async (req, res) => {
       },
       transaction: t
     });
-    
+
     statusValue = matrixExists ? 'Requested' : 'Posted';
 
     const refID = IsNew ? generateLinkID() : data.LinkID;
@@ -88,21 +88,21 @@ exports.saveTransaction = async (req, res) => {
     }
 
 
-     // ---------------- Create New Spouse if needed ----------------
-     if (IsNew && !data.MarytoID && data.MarrytoName) { 
+    // ---------------- Create New Spouse if needed ----------------
+    if (IsNew && !data.MarytoID && data.MarrytoName) {
       try {
-         console.log('Creating New Spouse:', data.MarrytoName);
-         const newSpouse = await Customer.create({
-            Name: data.MarrytoName,
-            Active: true,
-            CreatedBy: req.user.id,
-            CreatedDate: new Date(),
-            ModifyBy: req.user.id,
-            ModifyDate: new Date()
-         }, { transaction: t });
-         data.MarytoID = newSpouse.ID; // Update the ID variable you use for creating the record
+        console.log('Creating New Spouse:', data.MarrytoName);
+        const newSpouse = await Customer.create({
+          Name: data.MarrytoName,
+          Active: true,
+          CreatedBy: req.user.id,
+          CreatedDate: new Date(),
+          ModifyBy: req.user.id,
+          ModifyDate: new Date()
+        }, { transaction: t });
+        data.MarytoID = newSpouse.ID; // Update the ID variable you use for creating the record
       } catch (err) {
-         console.error('Error creating spouse:', err);
+        console.error('Error creating spouse:', err);
       }
     }
 
@@ -248,7 +248,7 @@ exports.getAll = async (req, res) => {
       attributes: {
         include: [
           [
-            literal("CONCAT(`RequestedByEmployee`.`FirstName`, ' ', `RequestedByEmployee`.`MiddleName`, ' ', `RequestedByEmployee`.`LastName`)"),
+            literal("ISNULL([RequestedByEmployee].[FirstName], '') + ' ' + ISNULL([RequestedByEmployee].[MiddleName], '') + ' ' + ISNULL([RequestedByEmployee].[LastName], '')"),
             'RequestedByName'
           ],
         ]

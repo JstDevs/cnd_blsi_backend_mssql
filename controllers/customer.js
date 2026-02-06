@@ -73,6 +73,7 @@ exports.getById = async (req, res) => {
     if (item) res.json(item);
     else res.status(404).json({ message: "customer not found" });
   } catch (err) {
+    console.error('Customer getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };

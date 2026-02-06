@@ -24,6 +24,7 @@ exports.getAll = async (req, res) => {
     const items = await vendorType.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
+    console.error('VendorType getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -34,6 +35,7 @@ exports.getById = async (req, res) => {
     if (item) res.json(item);
     else res.status(404).json({ message: "vendorType not found" });
   } catch (err) {
+    console.error('VendorType getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };

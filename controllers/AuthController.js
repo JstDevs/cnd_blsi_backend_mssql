@@ -340,7 +340,7 @@ router.login = async (req, res) => {
 
         // Update last login (optional)
         await Users.update(
-            { LastLoginDate: new Date() },
+            { LastLoginDate: db.sequelize.fn('GETDATE') },
             { where: { ID: user.ID } }
         );
 
@@ -494,8 +494,8 @@ router.register = async (req, res) => {
             userAccessArray: userAccessArray || [], // Assuming userAccessArray is an array of access levels
             // UserAccessID: 1, // Default user access level
             Active: true,
-            CreatedBy: 'System',
-            CreatedDate: new Date()
+            CreatedBy: req.user?.id ?? 1,
+            CreatedDate: db.sequelize.fn('GETDATE')
         });
         let parseArray;
         try {

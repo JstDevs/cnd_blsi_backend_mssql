@@ -56,6 +56,7 @@ exports.getById = async (req, res) => {
     if (item) res.json(item);
     else res.status(404).json({ message: "vendor not found" });
   } catch (err) {
+    console.error('Vendor getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };

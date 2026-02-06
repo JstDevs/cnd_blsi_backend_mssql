@@ -14,6 +14,7 @@ exports.create = async (req, res) => {
     });
     res.status(201).json(item);
   } catch (err) {
+    console.error('Position create error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -24,6 +25,7 @@ exports.getAll = async (req, res) => {
     const items = await position.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
+    console.error('Position getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -35,6 +37,7 @@ exports.getById = async (req, res) => {
     if (item) res.json(item);
     else res.status(404).json({ message: "position not found" });
   } catch (err) {
+    console.error('Position getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -57,6 +60,7 @@ exports.update = async (req, res) => {
       res.status(404).json({ message: "position not found" });
     }
   } catch (err) {
+    console.error('Position update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -75,6 +79,7 @@ exports.delete = async (req, res) => {
     if (updated) res.json({ message: "position deactivated" });
     else res.status(404).json({ message: "position not found" });
   } catch (err) {
+    console.error('Position delete error:', err);
     res.status(500).json({ error: err.message });
   }
 };

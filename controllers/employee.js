@@ -68,6 +68,7 @@ exports.getAll = async (req, res) => {
     const items = await getAllWithAssociations(employee, 1, { Active: true })
     res.json(items);
   } catch (err) {
+    console.error('Employee getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -79,6 +80,7 @@ exports.getById = async (req, res) => {
     if (item) res.json(item);
     else res.status(404).json({ message: "employee not found" });
   } catch (err) {
+    console.error('Employee getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };

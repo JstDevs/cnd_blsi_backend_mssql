@@ -112,10 +112,10 @@ exports.create = async (req, res) => {
         StreetAddress: Address || 'N/A',
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ModifyBy: req.user.id,
-        ModifyDate: new Date(),
-        EmploymentDate: new Date(), // Placeholder
+        ModifyDate: db.sequelize.fn('GETDATE'),
+        EmploymentDate: db.sequelize.fn('GETDATE'), // Placeholder
       }, { transaction: t });
 
       EmployeeID = newEmployee.ID;
@@ -131,9 +131,9 @@ exports.create = async (req, res) => {
         BusinessType: 'TBD',
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ModifyBy: req.user.id,
-        ModifyDate: new Date()
+        ModifyDate: db.sequelize.fn('GETDATE')
       }, { transaction: t });
 
       VendorID = newVendor.ID;
@@ -156,7 +156,7 @@ exports.create = async (req, res) => {
     let currentNumber = null;
 
     if (isAutoPost) {
-      const now = new Date();
+      const now = new Date(); // keeping local now for logic calculation
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, "0");
       const currentYYMM = `${year}-${month}`;
@@ -468,6 +468,7 @@ exports.getById = async (req, res) => {
   try {
     throw new Error('getById is not implemented for Obligation Requests');
   } catch (err) {
+    console.error('Obligation Request getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -522,7 +523,7 @@ exports.update = async (req, res) => {
       Total,
       RequestedBy: req.user.employeeID,
       ModifyBy: req.user.id,
-      ModifyDate: new Date(),
+      ModifyDate: db.sequelize.fn('GETDATE'),
       Credit: Total,
       EWT,
       WithheldAmount,
@@ -737,7 +738,7 @@ exports.delete = async (req, res) => {
     await transaction.update({
       Status: 'Void',
       ModifyBy: req.user.id,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // --- INSERT INTO Approval Audit (Void Action) ---
@@ -745,10 +746,10 @@ exports.delete = async (req, res) => {
       {
         LinkID: generateLinkID(), // Unique Link for this audit entry
         InvoiceLink: transaction.LinkID,
-        RejectionDate: new Date(), // Using RejectionDate to signify "Voided" date in some systems, or just date
+        RejectionDate: db.sequelize.fn('GETDATE'), // Using RejectionDate to signify "Voided" date in some systems, or just date
         Remarks: "Transaction Voided by User",
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalVersion: transaction.ApprovalVersion
       },
       { transaction: t }

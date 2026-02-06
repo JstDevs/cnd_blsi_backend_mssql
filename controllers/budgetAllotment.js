@@ -129,6 +129,33 @@ exports.save = async (req, res) => {
         { where: { ID: 20 }, transaction: t }
       );
 
+      // --- UPDATE Budget Table IF AUTO-POSTED ---
+      if (statusValue === 'Posted') {
+        const bID = data.BudgetID;
+        if (bID) {
+          const budget = await BudgetModel.findByPk(bID, { transaction: t });
+          if (budget) {
+            const currentReleased = parseFloat(budget.Released || 0);
+            const newReleased = currentReleased + amount;
+
+            const appropriation = parseFloat(budget.Appropriation || 0);
+            const supplemental = parseFloat(budget.Supplemental || 0);
+            const transfer = parseFloat(budget.Transfer || 0);
+
+            // Correct Formula: Total Adjusted Appropriation - Released
+            const newBalance = (appropriation + supplemental + transfer) - newReleased;
+
+            await budget.update({
+              Released: newReleased,
+              AllotmentBalance: newBalance,
+              AppropriationBalance: newBalance,
+              ModifyBy: userID,
+              ModifyDate: db.sequelize.fn('GETDATE')
+            }, { transaction: t });
+          }
+        }
+      }
+
     } else {
       // UPDATE existing TransactionTable
       await TransactionTableModel.update({
@@ -301,12 +328,16 @@ exports.delete = async (req, res) => {
           const newReleased = currentReleased - allotmentAmount;
 
           const appropriation = parseFloat(budget.Appropriation || 0);
-          const newAllotmentBalance = appropriation - newReleased;
+          const supplemental = parseFloat(budget.Supplemental || 0);
+          const transfer = parseFloat(budget.Transfer || 0);
+
+          const newAllotmentBalance = (appropriation + supplemental + transfer) - newReleased;
 
           await budget.update(
             {
               Released: newReleased,
               AllotmentBalance: newAllotmentBalance,
+              AppropriationBalance: newAllotmentBalance,
               ModifyBy: userID,
               ModifyDate: db.sequelize.fn('GETDATE')
             },
@@ -443,12 +474,16 @@ exports.approveTransaction = async (req, res) => {
           const newReleased = currentReleased + allotmentAmount;
 
           const appropriation = parseFloat(budget.Appropriation || 0);
-          const newAllotmentBalance = appropriation - newReleased;
+          const supplemental = parseFloat(budget.Supplemental || 0);
+          const transfer = parseFloat(budget.Transfer || 0);
+
+          const newAllotmentBalance = (appropriation + supplemental + transfer) - newReleased;
 
           await BudgetModel.update(
             {
               Released: newReleased,
               AllotmentBalance: newAllotmentBalance,
+              AppropriationBalance: newAllotmentBalance,
               ModifyBy: req.user.id,
               ModifyDate: db.sequelize.fn('GETDATE')
             },

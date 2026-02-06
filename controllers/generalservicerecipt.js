@@ -89,9 +89,9 @@ async function saveTransaction(req, res) {
             Name: CustomerName,
             Active: true,
             CreatedBy: req.user.id,
-            CreatedDate: new Date(),
+            CreatedDate: db.sequelize.fn('GETDATE'),
             ModifyBy: req.user.id,
-            ModifyDate: new Date()
+            ModifyDate: db.sequelize.fn('GETDATE')
           }, { transaction: t });
           CustomerID = newVendor.ID;
         } else {
@@ -101,9 +101,9 @@ async function saveTransaction(req, res) {
             Name: CustomerName, // Often mapped to FirstName/LastName but logic here implies simplified Name field usage or Name as full string
             Active: true,
             CreatedBy: req.user.id,
-            CreatedDate: new Date(),
+            CreatedDate: db.sequelize.fn('GETDATE'),
             ModifyBy: req.user.id,
-            ModifyDate: new Date()
+            ModifyDate: db.sequelize.fn('GETDATE')
           }, { transaction: t });
           CustomerID = newCustomer.ID;
         }
@@ -175,7 +175,7 @@ async function saveTransaction(req, res) {
         ApprovalVersion: latestApprovalVersion,
         FundsID,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Active: true,
         CheckNumber,
         PayeeBank,
@@ -219,7 +219,7 @@ async function saveTransaction(req, res) {
         ApprovalVersion: latestApprovalVersion,
         FundsID,
         ModifyBy: req.user.id,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         CheckNumber,
         PayeeBank,
         CheckDate: CheckDate || null,
@@ -249,7 +249,7 @@ async function saveTransaction(req, res) {
         Sub_Total_Vat_Ex: parseFloat(row.Sub_Total_Vat_Ex),
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Credit: parseFloat(row.Credit),
         Debit: parseFloat(row.Debit),
         Vat_Total: parseFloat(row.Vat_Total),
@@ -341,6 +341,7 @@ const getAll = async (req, res) => {
 
     res.json(items);
   } catch (err) {
+    console.error('Official Receipt getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -368,10 +369,10 @@ const deleteTransaction = async (req, res) => {
     await ApprovalAudit.create({
       LinkID: trx.LinkID,
       InvoiceLink: trx.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: 'Voided',
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 

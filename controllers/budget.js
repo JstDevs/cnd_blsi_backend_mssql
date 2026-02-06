@@ -8,8 +8,30 @@ const { sequelize, TransactionTable, Attachment, ApprovalAudit, documentType, Ap
 const item = require('../models/item');
 exports.create = async (req, res) => {
   try {
-    const { FiscalYearID, FundID, ProjectID, Name, DepartmentID, SubDepartmentID, ChartofAccountsID, Appropriation, TotalAmount, AppropriationBalance, Change, Supplemental, Transfer, Released, AllotmentBalance, ChargedAllotment, PreEncumbrance, Encumbrance, Charges, January, February, March, April, May, June, July, August, September, October, November, December, RevisedAmount, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate } = req.body;
-    const item = await budget.create({ FiscalYearID, FundID, ProjectID, Name, DepartmentID, SubDepartmentID, ChartofAccountsID, Appropriation, TotalAmount, AppropriationBalance, Change, Supplemental, Transfer, Released, AllotmentBalance, ChargedAllotment, PreEncumbrance, Encumbrance, Charges, January, February, March, April, May, June, July, August, September, October, November, December, RevisedAmount, Active, CreatedBy: req.user.id, CreatedDate: db.sequelize.fn('GETDATE'), ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') });
+    const { FiscalYearID, FundID, ProjectID, Name, DepartmentID, SubDepartmentID, ChartofAccountsID, Appropriation, TotalAmount, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate } = req.body;
+
+    // Initialize balances if not explicitly provided
+    const initialAppropriation = parseFloat(Appropriation || 0);
+    const initialBalance = initialAppropriation;
+
+    const item = await budget.create({
+      FiscalYearID,
+      FundID,
+      ProjectID,
+      Name,
+      DepartmentID,
+      SubDepartmentID,
+      ChartofAccountsID,
+      Appropriation: initialAppropriation,
+      TotalAmount: initialAppropriation,
+      AppropriationBalance: initialBalance,
+      AllotmentBalance: initialBalance, // Critical fix: initialize allotment balance
+      Active,
+      CreatedBy: req.user.id,
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    });
     res.status(201).json(item);
   } catch (err) {
     console.error('Budget create error:', err);

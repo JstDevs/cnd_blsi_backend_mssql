@@ -108,6 +108,32 @@ exports.save = async (req, res) => {
         { CurrentNumber: doc.CurrentNumber + 1 },
         { where: { ID: docTypeID }, transaction: t }
       );
+
+      // --- UPDATE Budget Table IF AUTO-POSTED ---
+      if (statusValue === 'Posted') {
+        const bID = data.BudgetID;
+        if (bID) {
+          const budget = await BudgetModel.findByPk(bID, { transaction: t });
+          if (budget) {
+            const currentSupplemental = parseFloat(budget.Supplemental || 0);
+            const newSupplemental = currentSupplemental + amount;
+
+            const appropriation = parseFloat(budget.Appropriation || 0);
+            const transfer = parseFloat(budget.Transfer || 0);
+            const released = parseFloat(budget.Released || 0);
+
+            const newBalance = (appropriation + newSupplemental + transfer) - released;
+
+            await budget.update({
+              Supplemental: newSupplemental,
+              AllotmentBalance: newBalance,
+              AppropriationBalance: newBalance,
+              ModifyBy: userID,
+              ModifyDate: db.sequelize.fn('GETDATE')
+            }, { transaction: t });
+          }
+        }
+      }
     } else {
       // UPDATE Transaction Table
       await TransactionTableModel.update({

@@ -41,7 +41,7 @@ exports.create = async (req, res) => {
       },
       transaction: t
     });
-    
+
     statusValue = matrixExists ? 'Requested' : 'Posted';
 
     // get approval version
@@ -67,7 +67,7 @@ exports.create = async (req, res) => {
       Remarks,
       Active: true,
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalProgress: 0,
       ApprovalVersion: approvalVersion,
     }, { transaction: t });
@@ -193,7 +193,7 @@ exports.update = async (req, res) => {
       ApprovalProgress: 0,
       ApprovalVersion: approvalVersion,
       ModifyBy: req.user.id,
-      ModifyDate: new Date(),
+      ModifyDate: db.sequelize.fn('GETDATE'),
     }, {
       where: { ID },
       transaction: t
@@ -351,6 +351,7 @@ exports.getById = async (req, res) => {
     if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
     res.status(200).json(transaction);
   } catch (error) {
+    console.error('Purchase Request getById error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -373,17 +374,17 @@ exports.delete = async (req, res) => {
       Status: 'Void',
       Active: true,
       ModifyBy: userID,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // --- LOG TO AUDIT ---
     await db.ApprovalAudit.create({
       LinkID: generateLinkID(),
       InvoiceLink: transaction.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: "Transaction Voided by User",
       CreatedBy: userID,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transaction.ApprovalVersion
     }, { transaction: t });
 
@@ -417,9 +418,9 @@ exports.approve = async (req, res) => {
       PositionorEmployee: 'Employee',
       PositionorEmployeeID: req.user.employeeID,
       SequenceOrder: approvalProgress,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transaction.ApprovalVersion
     }, { transaction: t });
 
@@ -446,10 +447,10 @@ exports.reject = async (req, res) => {
     await db.ApprovalAudit.create({
       LinkID: transaction.LinkID,
       InvoiceLink: transaction.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: reason || '',
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transaction.ApprovalVersion
     }, { transaction: t });
 

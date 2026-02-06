@@ -108,7 +108,7 @@ exports.save = async (req, res) => {
         Type: 'Individual',
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: db.sequelize.fn('GETDATE')
       }, { transaction: t });
 
       CustomerID = customer.ID;
@@ -151,10 +151,10 @@ exports.save = async (req, res) => {
         StreetAddress: data.Address || 'N/A',
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ModifyBy: req.user.id,
-        ModifyDate: new Date(),
-        EmploymentDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
+        EmploymentDate: db.sequelize.fn('GETDATE'),
       }, { transaction: t });
 
       EmployeeID = newEmployee.ID;
@@ -171,9 +171,9 @@ exports.save = async (req, res) => {
         BusinessType: 'TBD',
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ModifyBy: req.user.id,
-        ModifyDate: new Date()
+        ModifyDate: db.sequelize.fn('GETDATE')
       }, { transaction: t });
 
       VendorID = newVendor.ID;
@@ -471,7 +471,7 @@ exports.create = async (req, res) => {
           Type: "Individual",
           Active: true,
           CreatedBy: req.user.id,
-          CreatedDate: new Date()
+          CreatedDate: db.sequelize.fn('GETDATE')
         },
         { transaction: trx }
       );
@@ -492,7 +492,7 @@ exports.create = async (req, res) => {
         Status: statusValue,
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Credit: Total,
         Debit: Total,
         EWT,
@@ -558,7 +558,7 @@ exports.create = async (req, res) => {
           Sub_Total_Vat_Ex: itm.subtotalTaxExcluded,
           Active: true,
           CreatedBy: req.user.id,
-          CreatedDate: new Date(),
+          CreatedDate: db.sequelize.fn('GETDATE'),
           Credit: credit,
           Debit: debit,
           Vat_Total: itm.vat,
@@ -716,7 +716,7 @@ exports.update = async (req, res) => {
         Total,
         RequestedBy: req.user.employeeID,
         ModifyBy: req.user.id,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         Credit,
         EWT,
         WithheldAmount,

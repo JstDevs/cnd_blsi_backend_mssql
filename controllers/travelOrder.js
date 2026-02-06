@@ -108,11 +108,11 @@ exports.create = async (req, res) => {
       APAR: 'Travel Order',
       DocumentTypeID: docID,
       RequestedBy: req.user.employeeID,
-      InvoiceDate: new Date(),
+      InvoiceDate: db.sequelize.fn('GETDATE'),
       InvoiceNumber: invoiceNo,
       Active: true,
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalProgress: 0,
       ApprovalVersion: latestApprovalVersion,
       Total: TotalAmount,
@@ -129,7 +129,7 @@ exports.create = async (req, res) => {
       InvoiceNumber: invoiceNo,
       CreatedBy: req.user.id,
       BudgetID,
-      DateCreated: new Date(),
+      DateCreated: db.sequelize.fn('GETDATE'),
       DateStart,
       DateEnd,
       No_of_Days,
@@ -522,7 +522,7 @@ exports.delete = async (req, res) => {
     await transactionRecord.update({
       Status: 'Void',
       ModifyBy: req.user.id,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // Log the void action in ApprovalAudit
@@ -530,7 +530,7 @@ exports.delete = async (req, res) => {
     await ApprovalAuditModel.create({
       LinkID: generateLinkID(),
       InvoiceLink: linkID,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       Remarks: 'Travel Order Voided',
       CreatedBy: req.user.id,
       ApprovalVersion: transactionRecord.ApprovalVersion
@@ -591,7 +591,7 @@ exports.approveTransaction = async (req, res) => {
     await transactionRecord.update({
       Status: 'Posted',
       ModifyBy: req.user.id,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // Log the approval in ApprovalAudit
@@ -601,10 +601,10 @@ exports.approveTransaction = async (req, res) => {
       InvoiceLink: linkID,
       PositionEmployee: 'Employee',
       PositionEmployeeID: req.user.employeeID,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       Remarks: 'Travel Order Approved',
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transactionRecord.ApprovalVersion
     }, { transaction: t });
 
@@ -663,7 +663,7 @@ exports.rejectTransaction = async (req, res) => {
     await transactionRecord.update({
       Status: 'Rejected',
       ModifyBy: req.user.id,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // Log the rejection in ApprovalAudit
@@ -671,10 +671,10 @@ exports.rejectTransaction = async (req, res) => {
     await ApprovalAuditModel.create({
       LinkID: generateLinkID(),
       InvoiceLink: linkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: Reason || 'Travel Order Rejected',
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transactionRecord.ApprovalVersion
     }, { transaction: t });
 

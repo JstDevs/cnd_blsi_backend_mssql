@@ -1,11 +1,22 @@
-const { currency } = require('../config/database');
+const db = require('../config/database');
+const currency = db.currency;
 
 exports.create = async (req, res) => {
   try {
-    const { Code, Name } = req.body;
-    const item = await currency.create({ Code, Name, Active: true, CreatedBy: req.user.id, CreatedDate: new Date(), ModifyBy: req.user.id, ModifyDate: new Date() });
+    const { Code, Name, Symbol } = req.body;
+    const item = await currency.create({
+      Code,
+      Name,
+      Symbol,
+      Active: true,
+      CreatedBy: req.user.id,
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    });
     res.status(201).json(item);
   } catch (err) {
+    console.error('Currency create error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -31,9 +42,15 @@ exports.getById = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { Code, Name } = req.body;
-    const [updated] = await currency.update({ Code, Name, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+    const { Code, Name, Symbol } = req.body;
+    const [updated] = await currency.update({
+      Code,
+      Name,
+      Symbol,
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, {
+      where: { ID: req.params.id }
     });
     if (updated) {
       const updatedItem = await currency.findByPk(req.params.id);
@@ -42,6 +59,7 @@ exports.update = async (req, res) => {
       res.status(404).json({ message: "currency not found" });
     }
   } catch (err) {
+    console.error('Currency update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -49,12 +67,13 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const [updated] = await currency.update(
-      { Active: false, ModifyBy: req.user.id, ModifyDate: new Date() },
-      { where: { id: req.params.id, Active: true } }
+      { Active: false, ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') },
+      { where: { ID: req.params.id, Active: true } }
     );
     if (updated) res.json({ message: "currency deactivated" });
     else res.status(404).json({ message: "currency not found" });
   } catch (err) {
+    console.error('Currency delete error:', err);
     res.status(500).json({ error: err.message });
   }
 };

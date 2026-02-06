@@ -17,7 +17,7 @@ exports.create = async (req, res) => {
       ChartofAccountsCode,
       BeginningBalance,
       CreatedBy: req.user.id,
-      CreatedDate: new Date()
+      CreatedDate: db.sequelize.fn('GETDATE')
     });
 
     const fullItem = await BeginningBalanceModel.findOne({
@@ -79,8 +79,8 @@ exports.update = async (req, res) => {
         FundsID,
         ChartofAccountsCode,
         BeginningBalance,
-        UpdatedBy: req.user.id,
-        UpdatedDate: new Date()
+        ModifyBy: req.user.id,
+        ModifyDate: db.sequelize.fn('GETDATE')
       },
       { where: { ID: id } }
     );
@@ -160,7 +160,7 @@ exports.transfer = async (req, res) => {
       BeginningBalance: entry.BeginningBalance,
       TransactionType: entry.TransactionType,
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
     }));
 
     // Step 3: Bulk insert
@@ -210,7 +210,7 @@ exports.getAll = async (req, res) => {
           model: FiscalYearModel,
           as: 'FiscalYear',
           attributes: [],
-          where: { id: FiscalYearID },
+          where: { ID: FiscalYearID },
         },
         {
           model: FundsModel,
@@ -249,7 +249,7 @@ exports.getById = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    const deleted = await BeginningBalanceModel.destroy({ where: { id: req.params.id } });
+    const deleted = await BeginningBalanceModel.destroy({ where: { ID: req.params.id } });
     if (deleted) res.json({ message: "beginningBalance deleted" });
     else res.status(404).json({ message: "beginningBalance not found" });
   } catch (err) {

@@ -1,7 +1,7 @@
 const { Customer, employee, CommunityTax, documentType, TransactionItems, TransactionTable } = require('../config/database');
 const { Op, literal } = require('sequelize');
-const db=require('../config/database')
-const {getAllWithAssociations}=require("../models/associatedDependency");
+const db = require('../config/database')
+const { getAllWithAssociations } = require("../models/associatedDependency");
 const generateLinkID = require("../utils/generateID")
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 
@@ -11,10 +11,10 @@ async function saveCustomerAndCTC(req, res) {
     const data = req.body;
 
     let IsNew = '';
-    if((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
+    if ((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
       IsNew = true;
     }
-    else if((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
+    else if ((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
       IsNew = false;
     }
     else {
@@ -22,17 +22,17 @@ async function saveCustomerAndCTC(req, res) {
     }
 
     let IsSelectedFromIndividual = '';
-    if((data.IsSelectedFromIndividual == "true") || (data.IsSelectedFromIndividual === true) || (data.IsSelectedFromIndividual == '1') || (data.IsSelectedFromIndividual == 1)) {
+    if ((data.IsSelectedFromIndividual == "true") || (data.IsSelectedFromIndividual === true) || (data.IsSelectedFromIndividual == '1') || (data.IsSelectedFromIndividual == 1)) {
       IsSelectedFromIndividual = true;
     }
-    else if((data.IsSelectedFromIndividual == "false") || (data.IsSelectedFromIndividual === false) || (data.IsSelectedFromIndividual == '0') || (data.IsSelectedFromIndividual == 0)) {
+    else if ((data.IsSelectedFromIndividual == "false") || (data.IsSelectedFromIndividual === false) || (data.IsSelectedFromIndividual == '0') || (data.IsSelectedFromIndividual == 0)) {
       IsSelectedFromIndividual = false;
     }
     else {
       throw new Error('Invalid value for IsSelectedFromIndividual. Expected true or false.');
     }
 
-    const docID=5
+    const docID = 5
     const requiredFields = [data.Year, data.LastName, data.FirstName, data.Address, data.Citizenship];
     if (requiredFields.some(f => !f || f.trim() === '')) {
       return res.status(400).json({ message: 'Please fill up all required fields.' });
@@ -54,18 +54,18 @@ async function saveCustomerAndCTC(req, res) {
         CivilStatus: data.CivilStatus,
         PlaceofBirth: data.PlaceOfBirth,
         Gender: data.Gender,
-        Height: height,
-        Weight: parseFloat(data.Weight) || 0,
-        Birthdate: data.BirthDate,
+        Height: parseFloat(data.Height) || null,
+        Weight: parseFloat(data.Weight) || null,
+        Birthdate: data.BirthDate || null,
         Citizenship: data.Citizenship,
-        ICRNumber: data.ICRNo,
+        ICRNumber: data.ICRNo || null,
         Occupation: data.Profession,
         Type: 'Individual',
         StreetAddress: cleanedAddress,
-        TIN: data.TIN,
+        TIN: data.TIN || null,
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: db.sequelize.fn('GETDATE')
       }, { transaction: t });
       customerId = customer.ID;
     } else if (
@@ -78,16 +78,16 @@ async function saveCustomerAndCTC(req, res) {
         CivilStatus: data.CivilStatus,
         PlaceofBirth: data.PlaceOfBirth,
         Gender: data.Gender,
-        Height: height,
-        Weight: parseFloat(data.Weight) || 0,
-        Birthdate: data.BirthDate,
+        Height: parseFloat(data.Height) || null,
+        Weight: parseFloat(data.Weight) || null,
+        Birthdate: data.BirthDate || null,
         Citizenship: data.Citizenship,
-        ICRNumber: data.ICRNo,
+        ICRNumber: data.ICRNo || null,
         Occupation: data.Profession,
         Type: 'Individual',
-        TIN: data.TIN,
+        TIN: data.TIN || null,
         ModifyBy: req.user.id,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
       }, { where: { ID: data.CustomerID }, transaction: t });
       customerId = data.CustomerID;
     }
@@ -96,7 +96,7 @@ async function saveCustomerAndCTC(req, res) {
     // if(!documentTypeRecord) {
     //   return res.status(404).json({ success: false, message: 'Document type not found' });
     // }
-          
+
     let statusValue = '';
     const matrixExists = await db.ApprovalMatrix.findOne({
       where: {
@@ -105,29 +105,29 @@ async function saveCustomerAndCTC(req, res) {
       },
       transaction: t
     });
-    statusValue = matrixExists ? 'Requested' : 'Posted';    
+    statusValue = matrixExists ? 'Requested' : 'Posted';
 
-    const latestapprovalversion=await getLatestApprovalVersion('Community Tax');
+    const latestapprovalversion = await getLatestApprovalVersion('Community Tax');
 
     if (IsNew) {
       await TransactionTable.create({
         LinkID: refID,
         APAR: 'Community Tax Certificate',
         DocumentTypeID: docID,
-        RequestedBy: req.user.employeeID,
+        RequestedBy: req.user.employeeID || null,
         CustomerID: customerId,
         CustomerName: `${data.FirstName} ${data.MiddleName} ${data.LastName}`,
         PlaceIssued: data.Municipality,
-        InvoiceDate: data.DateIssued,
-        TIN: data.TIN,
+        InvoiceDate: data.DateIssued || null,
+        TIN: data.TIN || null,
         InvoiceNumber: data.CCNumber,
-        Total: data.Total,
-        AmountReceived: data.AmountPaid,
+        Total: parseFloat(data.Total) || 0,
+        AmountReceived: parseFloat(data.AmountPaid) || 0,
         Remarks: data.Remarks,
         Status: statusValue,
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         BusinessEarnings: parseFloat(data.InputOne) || 0,
         OccupationEarnings: parseFloat(data.InputTwo) || 0,
         IncomeProperty: parseFloat(data.InputThree) || 0,
@@ -153,20 +153,29 @@ async function saveCustomerAndCTC(req, res) {
         }
       );
     } else {
+      const existingRecord = await TransactionTable.findOne({
+        where: { ID: data.ID },
+        transaction: t
+      });
+
+      if (!existingRecord) {
+        throw new Error('Record not found.');
+      }
+
       await TransactionTable.update({
         DocumentTypeID: docID,
-        RequestedBy: req.user.employeeID,
+        RequestedBy: req.user.employeeID || null,
         CustomerID: customerId,
         CustomerName: `${data.FirstName} ${data.MiddleName} ${data.LastName}`,
         PlaceIssued: data.Municipality,
-        InvoiceDate: data.DateIssued,
-        TIN: data.TIN,
-        Total: data.Total,
-        AmountReceived: data.AmountPaid,
+        InvoiceDate: data.DateIssued || null,
+        TIN: data.TIN || null,
+        Total: parseFloat(data.Total) || 0,
+        AmountReceived: parseFloat(data.AmountPaid) || 0,
         Remarks: data.Remarks,
         Active: true,
         ModifyBy: req.user.id,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         BusinessEarnings: parseFloat(data.InputOne) || 0,
         OccupationEarnings: parseFloat(data.InputTwo) || 0,
         IncomeProperty: parseFloat(data.InputThree) || 0,
@@ -176,14 +185,14 @@ async function saveCustomerAndCTC(req, res) {
         Interest: parseFloat(data.Interest) || 0,
         BasicTax: parseFloat(data.BasicTax) || 0,
         Year: data.Year,
-        Credit: data.Total,
-        Debit: data.Total,
+        Credit: parseFloat(data.Total) || 0,
+        Debit: parseFloat(data.Total) || 0,
         AmountInWords: data.Words,
         ApprovalVersion: latestapprovalversion
       }, { where: { ID: data.ID }, transaction: t });
 
       await TransactionItems.destroy({
-        where: { LinkID: refID },
+        where: { LinkID: existingRecord.LinkID },
         transaction: t
       });
     }
@@ -218,7 +227,7 @@ function mapCivilStatus(status) {
 }
 
 
-exports.getall=async (req, res) => {
+exports.getall = async (req, res) => {
   try {
     const records = await TransactionTable.findAll({
       where: {
@@ -228,7 +237,7 @@ exports.getall=async (req, res) => {
       attributes: {
         include: [
           // Add Customer Full Name
-          [literal(`CONCAT(Customer.FirstName, ' ', Customer.MiddleName, ' ', Customer.LastName)`), 'CustomerFullName'],          
+          [literal(`CONCAT(Customer.FirstName, ' ', Customer.MiddleName, ' ', Customer.LastName)`), 'CustomerFullName'],
           // Add Employee Full Name
           [literal(`CONCAT(RequestedByEmployee.FirstName, ' ', RequestedByEmployee.MiddleName, ' ', RequestedByEmployee.LastName)`), 'Employee']
         ]
@@ -265,13 +274,13 @@ exports.deleteCustomerCTC = async (req, res) => {
     }
 
     await TransactionTable.update({
-        Status: 'Void',
-        CreatedDate: new Date(),
-        CreatedBy: req.user.id,
-      },
+      Status: 'Void',
+      ModifyDate: db.sequelize.fn('GETDATE'), // Use ModifyDate instead of CreatedDate for voiding
+      ModifyBy: req.user.id,
+    },
       {
         where: { ID: id }
-    });
+      });
 
     res.json({ message: "success" });
   } catch (err) {
@@ -304,4 +313,4 @@ exports.getCurrentNumber = async (req, res) => {
 };
 
 
-exports.saveCustomerAndCTC=saveCustomerAndCTC
+exports.saveCustomerAndCTC = saveCustomerAndCTC

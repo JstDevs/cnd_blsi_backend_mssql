@@ -106,7 +106,7 @@ exports.view = async (req, res) => {
     console.log('General Ledger View Request Body:', req.body);
 
     const results = await sequelize.query(
-      'CALL SP_GeneralLedger(:accountCode, :fundID, :cutoff, :linkID)',
+      'EXEC SP_GeneralLedger :accountCode, :fundID, :cutoff, :linkID',
       {
         replacements: {
           accountCode: ChartofAccountsID ?? '%',
@@ -135,7 +135,6 @@ exports.view = async (req, res) => {
     }
 
     console.log('Final Data Rows:', finalData.length);
-
     return res.json(finalData);
   } catch (err) {
     console.error('Error:', err);
@@ -152,9 +151,9 @@ exports.exportExcel = async (req, res) => {
     } = req.body;
 
     const results = await sequelize.query(
-      'CALL SP_GeneralLedger(:accountCode, :fundID, :cutoff)',
+      'EXEC SP_GeneralLedger :accountCode, :fundID, :cutoff',
       {
-        replacements: { accountCode: ChartofAccountsID, fundID: FundID, cutoff: CutOffDate },
+        replacements: { accountCode: ChartofAccountsID ?? '%', fundID: FundID ?? '%', cutoff: CutOffDate ?? new Date().toISOString().slice(0, 10) },
       }
     );
 

@@ -42,6 +42,7 @@ exports.getAll = async (req, res) => {
     });
     res.json(items);
   } catch (err) {
+    console.error('Item getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -52,6 +53,7 @@ exports.getById = async (req, res) => {
     if (item_r) res.json(item_r);
     else res.status(404).json({ message: "item not found" });
   } catch (err) {
+    console.error('Item getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };

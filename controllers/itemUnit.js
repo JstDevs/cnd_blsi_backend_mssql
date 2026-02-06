@@ -25,6 +25,7 @@ exports.getAll = async (req, res) => {
     const items = await itemUnit.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
+    console.error('ItemUnit getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -35,6 +36,7 @@ exports.getById = async (req, res) => {
     if (item) res.json(item);
     else res.status(404).json({ message: "itemUnit not found" });
   } catch (err) {
+    console.error('ItemUnit getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };

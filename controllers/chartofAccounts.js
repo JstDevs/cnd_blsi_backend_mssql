@@ -34,6 +34,7 @@ exports.getAll = async (req, res) => {
     const items = await getAllWithAssociations(chartofAccounts, 1, { Active: true })
     res.json(items);
   } catch (err) {
+    console.error('ChartofAccounts getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -44,6 +45,7 @@ exports.getById = async (req, res) => {
     if (item) res.json(item);
     else res.status(404).json({ message: "chartofAccounts not found" });
   } catch (err) {
+    console.error('ChartofAccounts getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };

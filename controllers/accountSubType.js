@@ -27,6 +27,7 @@ exports.getAll = async (req, res) => {
     const items = await accountSubType.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
+    console.error('AccountSubType getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -37,6 +38,7 @@ exports.getById = async (req, res) => {
     if (item) res.json(item);
     else res.status(404).json({ message: "accountSubType not found" });
   } catch (err) {
+    console.error('AccountSubType getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };

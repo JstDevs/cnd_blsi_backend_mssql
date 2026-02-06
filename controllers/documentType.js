@@ -20,9 +20,23 @@ const db = require('../config/database');
 exports.create = async (req, res) => {
   try {
     const { Code, Name, DocumentTypeCategoryID, Prefix, StartNumber, CurrentNumber, Suffix } = req.body;
-    const item = await documentType.create({ Code, Name, DocumentTypeCategoryID, Prefix, StartNumber, CurrentNumber, Suffix, Active: true, CreatedBy: req.user.id, CreatedDate: new Date(), ModifyBy: req.user.id, ModifyDate: new Date() });
+    const item = await documentType.create({
+      Code,
+      Name,
+      DocumentTypeCategoryID,
+      Prefix,
+      StartNumber,
+      CurrentNumber,
+      Suffix,
+      Active: true,
+      CreatedBy: req.user.id,
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    });
     res.status(201).json(item);
   } catch (err) {
+    console.error('DocumentType create error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -32,16 +46,18 @@ exports.getAll = async (req, res) => {
     const items = await getAllWithAssociations(documentType, 1, { Active: true });
     res.json(items);
   } catch (err) {
+    console.error('DocumentType getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.getById = async (req, res) => {
   try {
-    const item = await documentType.findByPk(req.params.id);
+    const item = await documentType.findOne({ where: { ID: req.params.id, Active: true } });
     if (item) res.json(item);
     else res.status(404).json({ message: "documentType not found" });
   } catch (err) {
+    console.error('DocumentType getById error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -49,8 +65,18 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { Code, Name, DocumentTypeCategoryID, Prefix, StartNumber, CurrentNumber, Suffix } = req.body;
-    const [updated] = await documentType.update({ Code, Name, DocumentTypeCategoryID, Prefix, StartNumber, CurrentNumber, Suffix, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { ID: req.params.id }
+    const [updated] = await documentType.update({
+      Code,
+      Name,
+      DocumentTypeCategoryID,
+      Prefix,
+      StartNumber,
+      CurrentNumber,
+      Suffix,
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, {
+      where: { ID: req.params.id, Active: true }
     });
     if (updated) {
       const updatedItem = await documentType.findByPk(req.params.id);
@@ -59,24 +85,21 @@ exports.update = async (req, res) => {
       res.status(404).json({ message: "documentType not found" });
     }
   } catch (err) {
+    console.error('DocumentType update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.delete = async (req, res) => {
   try {
-    // const deleted = await documentType.destroy({ where: { id: req.params.id } });
-    // if (deleted) res.json({ message: "documentType deleted" });
-
-    // SOFT DELETE
-
     const [updated] = await documentType.update(
-      { Active: false, ModifyBy: req.user.id, ModifyDate: new Date() },
-      { where: { id: req.params.id, Active: true } }
+      { Active: false, ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') },
+      { where: { ID: req.params.id, Active: true } }
     );
     if (updated) res.json({ message: "DocumentType deactivated" })
     else res.status(404).json({ message: "documentType not found" });
   } catch (err) {
+    console.error('DocumentType delete error:', err);
     res.status(500).json({ error: err.message });
   }
 };

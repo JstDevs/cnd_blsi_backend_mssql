@@ -1,18 +1,27 @@
-const { industryType } = require('../config/database');
+const db = require('../config/database');
+const { industryType } = db;
 
 exports.create = async (req, res) => {
   try {
     const { Name } = req.body;
-    const item = await industryType.create({ Name, Active: true, CreatedBy: req.user.id, CreatedDate: new Date(), ModifyBy: req.user.id, ModifyDate: new Date() });
+    const item = await industryType.create({
+      Name,
+      Active: true,
+      CreatedBy: req.user.id,
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    });
     res.status(201).json(item);
   } catch (err) {
+    console.error('IndustryType create error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await industryType.findAll({ where: {Active: true} });
+    const items = await industryType.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -32,8 +41,12 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { Name } = req.body;
-    const [updated] = await industryType.update({ Name, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+    const [updated] = await industryType.update({
+      Name,
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, {
+      where: { ID: req.params.id }
     });
     if (updated) {
       const updatedItem = await industryType.findByPk(req.params.id);
@@ -42,6 +55,7 @@ exports.update = async (req, res) => {
       res.status(404).json({ message: "industryType not found" });
     }
   } catch (err) {
+    console.error('IndustryType update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -49,12 +63,13 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const [updated] = await industryType.update(
-      { Active: false, ModifyBy: req.user.id, ModifyDate: new Date() },
-      { where: { id: req.params.id, Active: true } }
+      { Active: false, ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') },
+      { where: { ID: req.params.id, Active: true } }
     );
     if (updated) res.json({ message: "industryType deactivated" });
     else res.status(404).json({ message: "industryType not found" });
   } catch (err) {
+    console.error('IndustryType delete error:', err);
     res.status(500).json({ error: err.message });
   }
 };

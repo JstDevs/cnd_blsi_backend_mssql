@@ -50,7 +50,16 @@ exports.create = async (req, res) => {
     EmployeeID = Number(EmployeeID) || 0;
 
     let { Items } = req.body;
-    Items = Items ? JSON.parse(Items) : [];
+    if (typeof Items === 'string') {
+      try {
+        Items = JSON.parse(Items);
+      } catch (e) {
+        console.error("Error parsing Items:", e);
+        Items = [];
+      }
+    } else {
+      Items = Items || [];
+    }
 
     const LinkID = generateLinkID();
 
@@ -67,11 +76,15 @@ exports.create = async (req, res) => {
         Type: 'Individual',
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
       }, { transaction: t });
 
       customerID = newCustomer.ID;
     }
+
+    // Capture User ID for audit fields
+    const userID = req.user.id;
+    const employeeID = req.user.employeeID;
 
     // Create new Employee with minimal details
     if (PayeeType == 'NewEmployee') {
@@ -111,9 +124,9 @@ exports.create = async (req, res) => {
         Position: 'TBD',
         StreetAddress: Address || 'N/A',
         Active: true,
-        CreatedBy: req.user.id,
+        CreatedBy: userID,
         CreatedDate: db.sequelize.fn('GETDATE'),
-        ModifyBy: req.user.id,
+        ModifyBy: userID,
         ModifyDate: db.sequelize.fn('GETDATE'),
         EmploymentDate: db.sequelize.fn('GETDATE'), // Placeholder
       }, { transaction: t });
@@ -130,9 +143,9 @@ exports.create = async (req, res) => {
         ContactPerson: 'N/A',
         BusinessType: 'TBD',
         Active: true,
-        CreatedBy: req.user.id,
+        CreatedBy: userID,
         CreatedDate: db.sequelize.fn('GETDATE'),
-        ModifyBy: req.user.id,
+        ModifyBy: userID,
         ModifyDate: db.sequelize.fn('GETDATE')
       }, { transaction: t });
 
@@ -176,10 +189,13 @@ exports.create = async (req, res) => {
       InvoiceDate,
       ResponsibilityCenter,
       Total,
-      RequestedBy: req.user.employeeID,
+      RequestedBy: employeeID,
       Status: statusValue,
       Active: true,
-      CreatedBy: req.user.id,
+      CreatedBy: userID,
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: userID,
+      ModifyDate: db.sequelize.fn('GETDATE'),
       Credit: Total,
       Debit: Total,
       EWT,
@@ -257,8 +273,8 @@ exports.create = async (req, res) => {
         Sub_Total_Vat_Ex: item.subtotalTaxExcluded,
 
         Active: 1,
-        CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedBy: userID,
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Credit: credit,
         Debit: debit,
 
@@ -293,11 +309,21 @@ exports.create = async (req, res) => {
         if (isAutoPost) {
           // Direct to Encumbrance if auto-posted
           const newEncumbrance = parseFloat(budget.Encumbrance || 0) + subtotal;
-          await budget.update({ Encumbrance: newEncumbrance }, { transaction: t });
+          const newBalance = parseFloat(budget.AllotmentBalance || 0) - subtotal;
+          await budget.update({
+            Encumbrance: newEncumbrance,
+            AllotmentBalance: newBalance,
+            AppropriationBalance: newBalance
+          }, { transaction: t });
         } else {
           // Regular requested status
           const newPreEncumbrance = parseFloat(budget.PreEncumbrance || 0) + subtotal;
-          await budget.update({ PreEncumbrance: newPreEncumbrance }, { transaction: t });
+          const newBalance = parseFloat(budget.AllotmentBalance || 0) - subtotal;
+          await budget.update({
+            PreEncumbrance: newPreEncumbrance,
+            AllotmentBalance: newBalance,
+            AppropriationBalance: newBalance
+          }, { transaction: t });
         }
       }
     }
@@ -328,9 +354,9 @@ exports.create = async (req, res) => {
       where: { ID: newRecord.ID },
       attributes: {
         include: [
-          [literal('[Department].[Name]'), 'ResponsibilityCenterName'],
-          [literal('[FiscalYear].[Name]'), 'FiscalYearName'],
-          [literal('[Project].[Title]'), 'ProjectName'],
+          [literal('(SELECT Name FROM department WHERE ID = TransactionTable.ResponsibilityCenter)'), 'ResponsibilityCenterName'],
+          [literal('(SELECT Name FROM FiscalYear WHERE ID = TransactionTable.FiscalYearID)'), 'FiscalYearName'],
+          [literal('(SELECT Title FROM Project WHERE ID = TransactionTable.ProjectID)'), 'ProjectName'],
         ]
       },
       include: [
@@ -726,6 +752,13 @@ exports.delete = async (req, res) => {
         });
 
         for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
+          await Budget.increment(
+            {
+              AllotmentBalance: totalAmount,
+              AppropriationBalance: totalAmount
+            },
+            { where: { ID: chargeAccountId }, transaction: t }
+          );
           await Budget.decrement(
             { PreEncumbrance: totalAmount },
             { where: { ID: chargeAccountId }, transaction: t }
@@ -746,7 +779,7 @@ exports.delete = async (req, res) => {
       {
         LinkID: generateLinkID(), // Unique Link for this audit entry
         InvoiceLink: transaction.LinkID,
-        RejectionDate: db.sequelize.fn('GETDATE'), // Using RejectionDate to signify "Voided" date in some systems, or just date
+        RejectionDate: db.sequelize.fn('GETDATE'), // Using RejectionDate to signify "Voided" date
         Remarks: "Transaction Voided by User",
         CreatedBy: req.user.id,
         CreatedDate: db.sequelize.fn('GETDATE'),
@@ -918,8 +951,10 @@ exports.approveTransaction = async (req, res) => {
         for (const [chargeId, updates] of Object.entries(chargeAccountSums)) {
           await BudgetModel.update(
             {
-              PreEncumbrance: literal(`GREATEST(0, CAST(PreEncumbrance AS DECIMAL(18,2)) - ${updates.pre})`),
+              // MSSQL doesn't support GREATEST, use CASE instead
+              PreEncumbrance: literal(`CASE WHEN CAST(PreEncumbrance AS DECIMAL(18,2)) - ${updates.pre} < 0 THEN 0 ELSE CAST(PreEncumbrance AS DECIMAL(18,2)) - ${updates.pre} END`),
               Encumbrance: literal(`CAST(Encumbrance AS DECIMAL(18,2)) + ${updates.enc}`)
+              // AllotmentBalance is NOT updated here because it was already reduced when PreEncumbrance was created
             },
             { where: { ID: chargeId }, transaction: t }
           );
@@ -949,7 +984,7 @@ exports.approveTransaction = async (req, res) => {
         LinkID: generateLinkID(),
         InvoiceLink: transaction.LinkID,
         PositionorEmployee: "Employee",
-        PositionorEmployeeID: req.user.employeeID,
+        PositionorEmployeeID: req.user.id,
         SequenceOrder: validation.currentSequence,
         ApprovalOrder: validation.numberOfApprovers,
         ApprovalDate: now,
@@ -1018,6 +1053,13 @@ exports.rejectTransaction = async (req, res) => {
       });
 
       for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
+        await Budget.increment(
+          {
+            AllotmentBalance: totalAmount,
+            AppropriationBalance: totalAmount
+          },
+          { where: { ID: chargeAccountId }, transaction: t }
+        );
         await Budget.decrement(
           { PreEncumbrance: totalAmount },
           { where: { ID: chargeAccountId }, transaction: t }
@@ -1030,10 +1072,10 @@ exports.rejectTransaction = async (req, res) => {
       {
         LinkID: varApprovalLink,
         InvoiceLink: transaction.LinkID,
-        RejectionDate: new Date(),
+        RejectionDate: db.sequelize.fn('GETDATE'),
         Remarks: reasonForRejection,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalVersion: transaction.ApprovalVersion
       },
       { transaction: t }

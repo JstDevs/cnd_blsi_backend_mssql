@@ -245,28 +245,43 @@ exports.save = async (req, res) => {
   try {
     const parsedFields = {};
 
-    // Reconstruct Attachments array from fields like Attachments[0].ID starts
+    // Helper for safe JSON parsing
+    const safeParse = (val) => {
+      if (typeof val === 'string') {
+        try {
+          return JSON.parse(val);
+        } catch (e) {
+          return val;
+        }
+      }
+      return val;
+    };
+
+    // Reconstruct Attachments array from fields like Attachments[0].ID
     const attachments = [];
     for (const key in req.body) {
       const match = key.match(/^Attachments\[(\d+)]\.(\w+)$/);
       if (match) {
         const index = parseInt(match[1]);
         const field = match[2];
-
         if (!attachments[index]) attachments[index] = {};
         attachments[index][field] = req.body[key];
       }
     }
     parsedFields.Attachments = attachments;
-    // Reconstruct Attachments array from fields like Attachments[0].ID ends
 
+    // Specific field parsing instead of a dangerous loop
+    const keysToParse = ['Items', 'Contras', 'IsNew', 'IsStandaloneRequest'];
     for (const key in req.body) {
-      try {
-        parsedFields[key] = JSON.parse(req.body[key]);
-      } catch {
+      if (keysToParse.includes(key)) {
+        parsedFields[key] = safeParse(req.body[key]);
+      } else {
         parsedFields[key] = req.body[key];
       }
     }
+
+    const userID = req.user.id;
+    const employeeID = req.user.employeeID;
 
     const {
       Attachments = [],
@@ -322,7 +337,7 @@ exports.save = async (req, res) => {
       if (obr) {
         obligationRequestNumber = obr.InvoiceNumber;
         if (!FundsID) {
-          FundsID = obr.FundsID;
+          FundsID = Number(obr.FundsID) || 0;
         }
       }
     }
@@ -341,8 +356,18 @@ exports.save = async (req, res) => {
       ? (data.ModeOfPayment === 'Check' ? 'Posted, Cheque Pending' : 'Posted')
       : 'Requested';
 
-    let newInvoiceNumber = data.InvoiceNumber;
-    let currentNumber = null;
+    // --- Optimization: Pre-fetch all Budgets involved ---
+    const allChargeAccountIDs = [...new Set(data.Items.map(item => Number(item.ChargeAccountID)).filter(id => id > 0))];
+    const budgetMap = new Map();
+    if (allChargeAccountIDs.length > 0) {
+      const budgets = await BudgetModel.findAll({
+        where: { ID: { [Op.in]: allChargeAccountIDs } },
+        include: [{ model: ChartofAccountsModel, as: 'ChartofAccounts', attributes: ['NormalBalance'] }],
+        transaction: t
+      });
+      budgets.forEach(b => budgetMap.set(Number(b.ID), b));
+    }
+    // ----------------------------------------------------
 
     if (isAutoPost) {
       // 1. Fetch Fund to get Code
@@ -359,23 +384,32 @@ exports.save = async (req, res) => {
       const chargeAccountSums = {};
       const items = data.Items || [];
       for (const item of items) {
-        const acctId = item.ChargeAccountID;
+        const acctId = Number(item.ChargeAccountID);
         const subtotal = parseFloat(item.subtotal || 0);
-        if (subtotal > 0) {
+        if (subtotal > 0 && acctId > 0) {
           chargeAccountSums[acctId] = (chargeAccountSums[acctId] || 0) + subtotal;
         }
       }
 
-      for (const acctId of Object.keys(chargeAccountSums)) {
-        const budget = await BudgetModel.findOne({ where: { ID: acctId }, transaction: t });
+      for (const acctIdStr of Object.keys(chargeAccountSums)) {
+        const acctId = Number(acctIdStr);
+        const budget = budgetMap.get(acctId);
         const requiredAmount = chargeAccountSums[acctId];
 
         if (budget) {
-          await budget.update({
-            Encumbrance: parseFloat(budget.Encumbrance || 0) - requiredAmount,
-            AllotmentBalance: parseFloat(budget.AllotmentBalance || 0) - requiredAmount,
-            Charges: parseFloat(budget.Charges || 0) + requiredAmount
-          }, { transaction: t });
+          if (IsStandaloneRequest) {
+            await budget.update({
+              Encumbrance: parseFloat(budget.Encumbrance || 0) + requiredAmount,
+              AllotmentBalance: parseFloat(budget.AllotmentBalance || 0) - requiredAmount,
+              AppropriationBalance: parseFloat(budget.AppropriationBalance || 0) - requiredAmount,
+              Charges: parseFloat(budget.Charges || 0) + requiredAmount
+            }, { transaction: t });
+          } else {
+            await budget.update({
+              Encumbrance: parseFloat(budget.Encumbrance || 0) - requiredAmount,
+              Charges: parseFloat(budget.Charges || 0) + requiredAmount
+            }, { transaction: t });
+          }
         }
       }
 
@@ -398,13 +432,15 @@ exports.save = async (req, res) => {
       BankID: data.BankID,
       CheckNumber: data.CheckNumber,
       ReceivedPaymentBy: data.ReceivedPaymentBy,
-      RequestedBy: req.user.employeeID,
+      RequestedBy: employeeID,
       Status: statusValue,
       Active: 1,
       Credit: data.Total,
       Debit: data.Total,
-      CreatedBy: req.user.id,
+      CreatedBy: userID,
       CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: userID,
+      ModifyDate: db.sequelize.fn('GETDATE'),
       EWT: data.EWT,
       WithheldAmount: data.WithheldAmount,
       Vat_Total: data.Vat_Total,
@@ -439,16 +475,9 @@ exports.save = async (req, res) => {
     // Insert Transaction Items
     const UniqueID = generateLinkID();
     for (const item of data.Items) {
-      const account = await BudgetModel.findOne({
-        where: { ID: item.ChargeAccountID },
-        include: [
-          {
-            model: ChartofAccountsModel,
-            as: 'ChartofAccounts',
-            attributes: ['NormalBalance'],
-          }
-        ]
-      });
+      const budgetID = Number(item.ChargeAccountID);
+      const account = budgetMap.get(budgetID);
+
       let credit = 0;
       let debit = 0;
       if (!account) {
@@ -475,7 +504,7 @@ exports.save = async (req, res) => {
         TaxRate: item.TaxRate,
         Sub_Total_Vat_Ex: item.subtotalTaxExcluded,
         Active: 1,
-        CreatedBy: req.user.id,
+        CreatedBy: userID,
         CreatedDate: db.sequelize.fn('GETDATE'),
         Credit: credit,
         Debit: debit,
@@ -1002,7 +1031,7 @@ exports.delete = async (req, res) => {
     await transaction.update({
       Status: 'Void',
       ModifyBy: req.user.id,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // Revert OBR status if linked
@@ -1028,10 +1057,10 @@ exports.delete = async (req, res) => {
     await ApprovalAuditModel.create({
       LinkID: generateLinkID(),
       InvoiceLink: transaction.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: "Voided by user",
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transaction.ApprovalVersion
     }, { transaction: t });
 
@@ -1161,7 +1190,7 @@ exports.approve = async (req, res) => {
         Debit: gl.Debit,
         Credit: gl.Credit,
         CreatedBy: trx.CreatedBy,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         DocumentTypeName: ""
       }, { transaction: t });
     }
@@ -1188,9 +1217,9 @@ exports.approve = async (req, res) => {
       PositionorEmployeeID: req.user.employeeID,
       SequenceOrder: validation.currentSequence,
       ApprovalOrder: validation.numberOfApprovers,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 
@@ -1278,10 +1307,10 @@ exports.reject = async (req, res) => {
       {
         LinkID: approvalLink,
         InvoiceLink: invoiceLink,
-        RejectionDate: new Date(),
+        RejectionDate: db.sequelize.fn('GETDATE'),
         Remarks: req.body.reason || '',
-        CreatedBy: createdBy,
-        CreatedDate: new Date(),
+        CreatedBy: req.user.id,
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalVersion: approvalVersion
       },
       { transaction: t }

@@ -126,8 +126,13 @@ exports.save = async (req, res) => {
             const appropriation = parseFloat(budget.Appropriation || 0);
             const supplemental = parseFloat(budget.Supplemental || 0);
             const released = parseFloat(budget.Released || 0);
+            const preEncumbrance = parseFloat(budget.PreEncumbrance || 0);
+            const encumbrance = parseFloat(budget.Encumbrance || 0);
+            const charges = parseFloat(budget.Charges || 0);
 
-            const newBalance = (appropriation + supplemental + newTransfer) - released;
+            // Interpretation B: 
+            // AllotmentBalance & AppropriationBalance = Available to spend (Total Budget - Obligations)
+            const newBalance = (appropriation + supplemental + newTransfer) - (preEncumbrance + encumbrance + charges);
 
             await budget.update({
               Transfer: newTransfer,

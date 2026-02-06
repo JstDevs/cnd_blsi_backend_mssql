@@ -4,9 +4,7 @@ const { Op, fn, col } = require('sequelize');
 async function getLatestApprovalVersion(likeString) {
   try {
     const result = await ApprovalMatrix.findOne({
-      attributes: [
-        [fn('MAX', col('Version')), 'LatestVersion']
-      ],
+      attributes: ['Version'],
       include: [{
         model: documentType,
         as: 'DocumentType',
@@ -18,10 +16,11 @@ async function getLatestApprovalVersion(likeString) {
       where: {
         Active: true
       },
+      order: [['Version', 'DESC']],
       raw: true
     });
 
-    const version = result?.LatestVersion;
+    const version = result?.Version;
 
     // Return null if no approval matrix found (allows posting without approval workflow)
     if (!version) {

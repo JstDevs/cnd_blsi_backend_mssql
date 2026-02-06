@@ -1,18 +1,29 @@
-const { paymentTerms, vendor } = require('../config/database');
+const db = require('../config/database');
+const { paymentTerms, vendor } = db;
 
 exports.create = async (req, res) => {
   try {
     const { Code, Name, NumberOfDays } = req.body;
-    const item = await paymentTerms.create({ Code, Name, NumberOfDays, Active: true, CreatedBy: req.user.id, CreatedDate: new Date(), ModifyBy: req.user.id, ModifyDate: new Date() });
+    const item = await paymentTerms.create({
+      Code,
+      Name,
+      NumberOfDays,
+      Active: true,
+      CreatedBy: req.user.id,
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    });
     res.status(201).json(item);
   } catch (err) {
+    console.error('PaymentTerms create error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await paymentTerms.findAll({ where: { Active: true} });
+    const items = await paymentTerms.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -32,8 +43,14 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { Code, Name, NumberOfDays } = req.body;
-    const [updated] = await paymentTerms.update({ Code, Name, NumberOfDays, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+    const [updated] = await paymentTerms.update({
+      Code,
+      Name,
+      NumberOfDays,
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, {
+      where: { ID: req.params.id }
     });
     if (updated) {
       const updatedItem = await paymentTerms.findByPk(req.params.id);
@@ -42,6 +59,7 @@ exports.update = async (req, res) => {
       res.status(404).json({ message: "paymentTerms not found" });
     }
   } catch (err) {
+    console.error('PaymentTerms update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -64,13 +82,14 @@ exports.delete = async (req, res) => {
 
     // SOFT DELETE
     const [updated] = await paymentTerms.update(
-      { Active: false, ModifyBy: req.user.id, ModifyDate: new Date() },
+      { Active: false, ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') },
       { where: { ID: id, Active: true } }
     );
 
     if (updated) res.json({ message: "paymentTerms deactivated" });
     else res.status(404).json({ message: "paymentTerms not found" });
   } catch (err) {
+    console.error('PaymentTerms delete error:', err);
     res.status(500).json({ error: err.message });
   }
 };

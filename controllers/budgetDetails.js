@@ -67,7 +67,9 @@ exports.save = async (req, res) => {
         December: data.December,
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
+        ModifyBy: req.user.id,
+        ModifyDate: db.sequelize.fn('GETDATE'),
         Change: 0,
         Supplemental: 0,
         Released: 0,
@@ -101,7 +103,7 @@ exports.save = async (req, res) => {
         November: data.November,
         December: data.December,
         ModifyBy: req.user.id,
-        CreatedDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
       };
     }
 
@@ -120,7 +122,7 @@ exports.save = async (req, res) => {
 
     res.json({ message: 'success' });
   } catch (error) {
-    console.error(error);
+    console.error('BudgetDetails save error:', error);
     await t.rollback();
     res.status(500).json({ error: error.message });
   }

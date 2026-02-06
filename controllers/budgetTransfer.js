@@ -94,13 +94,13 @@ exports.save = async (req, res) => {
         APAR: 'Budget Transfer',
         DocumentTypeID: docTypeID,
         RequestedBy: userID,
-        InvoiceDate: new Date(),
+        InvoiceDate: db.sequelize.fn('GETDATE'),
         InvoiceNumber: invoiceText,
         Total: amount,
         Active: true,
         Remarks: data.Remarks,
         CreatedBy: userID,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalProgress: 0,
         BudgetID: data.BudgetID,
         TargetID: data.TargetID,
@@ -114,7 +114,7 @@ exports.save = async (req, res) => {
     } else {
       await TransactionTableModel.update({
         ModifyBy: userID,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         Total: amount,
         Remarks: data.Remarks,
         BudgetID: data.BudgetID,
@@ -159,7 +159,7 @@ exports.save = async (req, res) => {
     res.json({ message: 'success' });
   } catch (error) {
     await t.rollback();
-    console.error(error);
+    console.error('BudgetTransfer save error:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 };
@@ -246,7 +246,7 @@ exports.list = async (req, res) => {
 
     res.json(records);
   } catch (error) {
-    console.error('Error loading Budget Transfer grid:', error);
+    console.error('Error loading Budget Transfer list:', error);
     res.status(500).json({ error: 'Failed to load Budget Transfer records' });
   }
 };
@@ -288,7 +288,7 @@ exports.delete = async (req, res) => {
             AllotmentBalance: newBalance,
             AppropriationBalance: newBalance,
             ModifyBy: userID,
-            ModifyDate: new Date()
+            ModifyDate: db.sequelize.fn('GETDATE')
           }, { transaction: t });
         }
       };
@@ -302,17 +302,17 @@ exports.delete = async (req, res) => {
       Status: 'Void',
       Active: true,
       ModifyBy: userID,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // --- LOG TO AUDIT ---
     await ApprovalAuditModel.create({
       LinkID: generateLinkID(),
       InvoiceLink: transaction.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: "Transaction Voided by User",
       CreatedBy: userID,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transaction.ApprovalVersion
     }, { transaction: t });
 
@@ -320,7 +320,7 @@ exports.delete = async (req, res) => {
     res.json({ message: 'success' });
   } catch (error) {
     if (t) await t.rollback();
-    console.error(error);
+    console.error('BudgetTransfer delete error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -336,7 +336,7 @@ exports.recover = async (req, res) => {
       {
         Active: true,
         ModifyBy: userID,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
       },
       {
         where: { ID: id }
@@ -349,7 +349,7 @@ exports.recover = async (req, res) => {
       res.status(404).json({ message: 'not found or already active' });
     }
   } catch (err) {
-    console.error(err);
+    console.error('BudgetTransfer recover error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -403,11 +403,11 @@ exports.approveTransaction = async (req, res) => {
         PositionorEmployeeID: req.user.employeeID,
         SequenceOrder: validation.currentSequence,
         ApprovalOrder: validation.numberOfApprovers,
-        ApprovalDate: new Date(),
+        ApprovalDate: db.sequelize.fn('GETDATE'),
         RejectionDate: null,
         Remarks: null,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalVersion: transaction.ApprovalVersion
       },
       { transaction: t }
@@ -442,7 +442,7 @@ exports.approveTransaction = async (req, res) => {
               AllotmentBalance: newBalance,
               AppropriationBalance: newBalance,
               ModifyBy: req.user.id,
-              ModifyDate: new Date()
+              ModifyDate: db.sequelize.fn('GETDATE')
             },
             { where: { ID: budgetID }, transaction: t }
           );
@@ -487,10 +487,10 @@ exports.rejectTransaction = async (req, res) => {
     await ApprovalAuditModel.create(
       {
         LinkID: linkId,            // [Link ID]
-        RejectionDate: new Date(), // GETDATE()
+        RejectionDate: db.sequelize.fn('GETDATE'), // GETDATE()
         Remarks: reason,           // rejection reason
         CreatedBy: req.user.id,      // maps to strUser
-        CreatedDate: new Date(),   // GETDATE()
+        CreatedDate: db.sequelize.fn('GETDATE'),   // GETDATE()
       },
       { transaction: t }
     );
@@ -499,6 +499,7 @@ exports.rejectTransaction = async (req, res) => {
     res.json({ success: true, message: "Transaction rejected successfully." });
   } catch (err) {
     await t.rollback();
+    console.error('BudgetTransfer reject error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };

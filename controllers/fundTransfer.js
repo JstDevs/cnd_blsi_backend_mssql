@@ -70,7 +70,7 @@ exports.save = async (req, res) => {
       },
       transaction: t
     });
-        
+
     statusValue = matrixExists ? 'Requested' : 'Posted';
     const approvalVersion = await getLatestApprovalVersion('Fund Transfer');
 
@@ -81,13 +81,13 @@ exports.save = async (req, res) => {
       APAR: 'Fund Transfer',
       DocumentTypeID: docTypeID,
       RequestedBy: 1,
-      InvoiceDate: new Date(),
+      InvoiceDate: db.sequelize.fn('GETDATE'),
       InvoiceNumber: invoiceText,
       Total: transferAmount,
       Active: true,
       Remarks: data.Remarks,
       CreatedBy: userID,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalProgress: 0,
       FundsID: data.FundsID,
       TargetID: data.TargetID,
@@ -136,7 +136,7 @@ exports.save = async (req, res) => {
 
 exports.fundList = async (req, res) => {
   try {
-    const fundList = await FundModel.findAll();
+    const fundList = await FundModel.findAll({ where: { Active: true } });
     res.json(fundList);
   } catch (error) {
     console.error('Error loading funds:', error);
@@ -168,6 +168,7 @@ exports.list = async (req, res) => {
           required: false
         }
       ],
+      order: [['CreatedDate', 'DESC']]
     });
 
     res.json(fundTransfers);
@@ -204,7 +205,9 @@ exports.delete = async (req, res) => {
 
           await FundModel.update({
             Balance: currentBalance + amountDelta,
-            Total: currentTotal + amountDelta
+            Total: currentTotal + amountDelta,
+            ModifyBy: userID,
+            ModifyDate: db.sequelize.fn('GETDATE')
           }, { where: { ID: fundID }, transaction: t });
         }
       };
@@ -218,17 +221,17 @@ exports.delete = async (req, res) => {
       Status: 'Void',
       Active: true,
       ModifyBy: userID,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // --- LOG TO AUDIT ---
     await ApprovalAuditModel.create({
       LinkID: generateLinkID(),
       InvoiceLink: transaction.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: "Transaction Voided by User",
       CreatedBy: userID,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transaction.ApprovalVersion
     }, { transaction: t });
 
@@ -236,7 +239,7 @@ exports.delete = async (req, res) => {
     res.json({ message: 'success' });
   } catch (error) {
     if (t) await t.rollback();
-    console.error(error);
+    console.error('FundTransfer delete error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -256,10 +259,10 @@ exports.rejectTransaction = async (req, res) => {
     await ApprovalAuditModel.create(
       {
         LinkID: linkId,
-        RejectionDate: new Date(),
+        RejectionDate: db.sequelize.fn('GETDATE'),
         Remarks: reason,
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: db.sequelize.fn('GETDATE')
       },
       { transaction: t }
     );
@@ -269,7 +272,8 @@ exports.rejectTransaction = async (req, res) => {
     res.json({ success: true, message: "Transaction rejected successfully." });
   } catch (err) {
     // --- Rollback on error ---
-    await t.rollback();
+    if (t) await t.rollback();
+    console.error('FundTransfer reject error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -289,10 +293,10 @@ exports.approve = async (req, res) => {
     await ApprovalAuditModel.create(
       {
         LinkID: linkId,
-        ApprovalDate: new Date(),
+        ApprovalDate: db.sequelize.fn('GETDATE'),
         Remarks: remarks || null,
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: db.sequelize.fn('GETDATE')
       },
       { transaction: t }
     );
@@ -319,7 +323,9 @@ exports.approve = async (req, res) => {
         await FundModel.update(
           {
             Balance: newBalance,
-            Total: newTotal
+            Total: newTotal,
+            ModifyBy: req.user.id,
+            ModifyDate: db.sequelize.fn('GETDATE')
           },
           { where: { ID: fundID }, transaction: t }
         );
@@ -343,8 +349,8 @@ exports.approve = async (req, res) => {
     await t.commit();
     res.json({ success: true, message: 'Transaction approved successfully.' });
   } catch (err) {
-    await t.rollback();
-    console.error('Approve Transaction Error:', err);
+    if (t) await t.rollback();
+    console.error('FundTransfer approve error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };

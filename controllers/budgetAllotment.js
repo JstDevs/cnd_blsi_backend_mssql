@@ -110,14 +110,14 @@ exports.save = async (req, res) => {
         APAR: 'Allotment Release Order',
         DocumentTypeID: 20,
         RequestedBy: userID,
-        InvoiceDate: new Date(),
+        InvoiceDate: db.sequelize.fn('GETDATE'),
         AmountinWords: data.AmountInWords, // Changed from AmountInWords to AmountinWords
         InvoiceNumber: invoiceText,
         Total: amount,
         Active: true,
         Remarks: data.Remarks,
         CreatedBy: userID,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalProgress: 0,
         BudgetID: data.BudgetID,
         ApprovalVersion: latestapprovalversion
@@ -133,7 +133,7 @@ exports.save = async (req, res) => {
       // UPDATE existing TransactionTable
       await TransactionTableModel.update({
         ModifyBy: userID,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         Total: amount,
         Remarks: data.Remarks,
         ApprovalProgress: 0,
@@ -251,9 +251,9 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const item = await vendorType.findByPk(req.params.id);
+    const item = await TransactionTableModel.findByPk(req.params.id);
     if (item) res.json(item);
-    else res.status(404).json({ message: "vendorType not found" });
+    else res.status(404).json({ message: "allotment not found" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -262,14 +262,14 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { Name } = req.body;
-    const [updated] = await vendorType.update({ Name, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+    const [updated] = await TransactionTableModel.update({ Name, ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') }, {
+      where: { ID: req.params.id }
     });
     if (updated) {
-      const updatedItem = await vendorType.findByPk(req.params.id);
+      const updatedItem = await TransactionTableModel.findByPk(req.params.id);
       res.json(updatedItem);
     } else {
-      res.status(404).json({ message: "vendorType not found" });
+      res.status(404).json({ message: "allotment not found" });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -308,7 +308,7 @@ exports.delete = async (req, res) => {
               Released: newReleased,
               AllotmentBalance: newAllotmentBalance,
               ModifyBy: userID,
-              ModifyDate: new Date()
+              ModifyDate: db.sequelize.fn('GETDATE')
             },
             { transaction: t }
           );
@@ -321,17 +321,17 @@ exports.delete = async (req, res) => {
       Status: 'Void',
       Active: true,
       ModifyBy: userID,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // --- LOG TO AUDIT ---
     await ApprovalAuditModel.create({
       LinkID: generateLinkID(),
       InvoiceLink: transaction.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: "Transaction Voided by User",
       CreatedBy: userID,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transaction.ApprovalVersion
     }, { transaction: t });
 
@@ -355,7 +355,7 @@ exports.recover = async (req, res) => {
       {
         Active: true,
         ModifyBy: userID,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
       },
       {
         where: { ID: id }
@@ -419,11 +419,11 @@ exports.approveTransaction = async (req, res) => {
         PositionorEmployeeID: req.user.employeeID,
         SequenceOrder: validation.currentSequence,
         ApprovalOrder: validation.numberOfApprovers,
-        ApprovalDate: new Date(),
+        ApprovalDate: db.sequelize.fn('GETDATE'),
         RejectionDate: null,
         Remarks: null,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalVersion: transaction.ApprovalVersion
       },
       { transaction: t }
@@ -450,7 +450,7 @@ exports.approveTransaction = async (req, res) => {
               Released: newReleased,
               AllotmentBalance: newAllotmentBalance,
               ModifyBy: req.user.id,
-              ModifyDate: new Date()
+              ModifyDate: db.sequelize.fn('GETDATE')
             },
             { where: { ID: bID }, transaction: t }
           );
@@ -485,10 +485,10 @@ exports.rejectTransaction = async (req, res) => {
     await ApprovalAuditModel.create(
       {
         LinkID: varApprovalLink,
-        RejectionDate: new Date(),
+        RejectionDate: db.sequelize.fn('GETDATE'),
         Remarks: reasonForRejection,
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: db.sequelize.fn('GETDATE')
       },
       { transaction: t }
     );

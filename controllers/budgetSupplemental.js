@@ -91,13 +91,13 @@ exports.save = async (req, res) => {
         APAR: 'Budget Supplemental',
         DocumentTypeID: docTypeID,
         RequestedBy: req.user.id,
-        InvoiceDate: new Date(),
+        InvoiceDate: db.sequelize.fn('GETDATE'),
         InvoiceNumber: invoiceText,
         Total: amount,
         Active: true,
         Remarks: data.Remarks,
         CreatedBy: userID,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalProgress: 0,
         BudgetID: data.BudgetID,
         ApprovalVersion: approvalVersion
@@ -112,7 +112,7 @@ exports.save = async (req, res) => {
       // UPDATE Transaction Table
       await TransactionTableModel.update({
         ModifyBy: userID,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         Total: amount,
         Remarks: data.Remarks,
         ApprovalProgress: 0,
@@ -156,7 +156,7 @@ exports.save = async (req, res) => {
     await t.commit();
     res.json({ message: 'success' });
   } catch (error) {
-    console.error(error);
+    console.error('BudgetSupplemental save error:', error);
     await t.rollback();
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
@@ -234,7 +234,7 @@ exports.list = async (req, res) => {
 
     res.json(transactions);
   } catch (error) {
-    console.error('Error loading:', error);
+    console.error('Error loading budget supplemental list:', error);
     res.status(500).json({ error: error.message || 'Failed to load data' });
   }
 };
@@ -275,7 +275,7 @@ exports.delete = async (req, res) => {
             AllotmentBalance: newBalance,
             AppropriationBalance: newBalance,
             ModifyBy: userID,
-            ModifyDate: new Date()
+            ModifyDate: db.sequelize.fn('GETDATE')
           }, { transaction: t });
         }
       }
@@ -286,17 +286,17 @@ exports.delete = async (req, res) => {
       Status: 'Void',
       Active: true,
       ModifyBy: userID,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // --- LOG TO AUDIT ---
     await ApprovalAuditModel.create({
       LinkID: generateLinkID(),
       InvoiceLink: transaction.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: "Transaction Voided by User",
       CreatedBy: userID,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: transaction.ApprovalVersion
     }, { transaction: t });
 
@@ -304,7 +304,7 @@ exports.delete = async (req, res) => {
     res.json({ message: 'success' });
   } catch (err) {
     if (t) await t.rollback();
-    console.error(err);
+    console.error('BudgetSupplemental delete error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -320,7 +320,7 @@ exports.recover = async (req, res) => {
       {
         Active: true,
         ModifyBy: userID,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
       },
       {
         where: { ID: id }
@@ -333,7 +333,7 @@ exports.recover = async (req, res) => {
       res.status(404).json({ message: 'not found or already active' });
     }
   } catch (err) {
-    console.error(err);
+    console.error('BudgetSupplemental recover error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -389,11 +389,11 @@ exports.approveTransaction = async (req, res) => {
         PositionorEmployeeID: req.user.employeeID,
         SequenceOrder: validation.currentSequence,
         ApprovalOrder: validation.numberOfApprovers,
-        ApprovalDate: new Date(),
+        ApprovalDate: db.sequelize.fn('GETDATE'),
         RejectionDate: null,
         Remarks: null,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalVersion: transaction.ApprovalVersion
       },
       { transaction: t }
@@ -429,7 +429,7 @@ exports.approveTransaction = async (req, res) => {
             AllotmentBalance: newBalance,
             AppropriationBalance: newBalance,
             ModifyBy: req.user.id,
-            ModifyDate: new Date()
+            ModifyDate: db.sequelize.fn('GETDATE')
           },
           { where: { ID: varBudgetID }, transaction: t }
         );
@@ -466,10 +466,10 @@ exports.rejectTransaction = async (req, res) => {
     await ApprovalAuditModel.create(
       {
         LinkID: varApprovalLink,
-        RejectionDate: new Date(),
+        RejectionDate: db.sequelize.fn('GETDATE'),
         Remarks: reasonForRejection,
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: db.sequelize.fn('GETDATE')
       },
       { transaction: t }
     );
@@ -479,6 +479,7 @@ exports.rejectTransaction = async (req, res) => {
 
   } catch (err) {
     await t.rollback();
+    console.error('BudgetSupplemental reject error:', err);
     res.status(500).json({ error: err.message });
   }
 };

@@ -1,8 +1,8 @@
 const { Funds } = require('../config/database');
-const {getAllWithAssociations}=require("../models/associatedDependency");
-const db=require('../config/database')
+const { getAllWithAssociations } = require("../models/associatedDependency");
+const db = require('../config/database')
 const { Op } = require("sequelize");
-const { sequelize, TransactionTable, Attachment, ApprovalAudit, documentType,ApprovalMatrix } =  require('../config/database');
+const { sequelize, TransactionTable, Attachment, ApprovalAudit, documentType, ApprovalMatrix } = require('../config/database');
 const generateLinkID = require("../utils/generateID")
 
 exports.saveRecord = async (req, res) => {
@@ -10,10 +10,10 @@ exports.saveRecord = async (req, res) => {
   let { IsNew } = req.body;
 
   try {
-    if((IsNew == "true") || (IsNew === true) || (IsNew == '1') || (IsNew == 1)) {
+    if ((IsNew == "true") || (IsNew === true) || (IsNew == '1') || (IsNew == 1)) {
       IsNew = true;
     }
-    else if((IsNew == "false") || (IsNew === false) || (IsNew == '0') || (IsNew == 0)) {
+    else if ((IsNew == "false") || (IsNew === false) || (IsNew == '0') || (IsNew == 0)) {
       IsNew = false;
     }
     else {
@@ -253,7 +253,7 @@ exports.delete = async (req, res) => {
 // }
 
 // Search funds
-exports.search= async (req, res) => {
+exports.search = async (req, res) => {
   const { query } = req.query;
   try {
     const results = await db.Funds.findAll({
@@ -298,9 +298,9 @@ exports.savefundtransfer = async (req, res) => {
     if (transferAmount > maxValue) {
       return res.status(400).json({ success: false, message: `Transfer amount cannot exceed balance of ${maxValue}` });
     }
-    docID=2
+    docID = 2
     // Get document type for Fund Transfer (ID = 26)
-    const docType = await db.documentType.findOne({ where: {  } });
+    const docType = await db.documentType.findOne({ where: {} });
     if (!docType) return res.status(404).json({ success: false, message: 'Document type not found.' });
     const approvalVersion = await getLatestApprovalVersion("fund transfer")
     const invoiceText = `${docType.Prefix}-${docType.CurrentNumber}-${docType.Suffix}`;
@@ -314,17 +314,17 @@ exports.savefundtransfer = async (req, res) => {
         APAR: 'Fund Transfer',
         DocumentTypeID: 26,
         RequestedBy: userId || 1,
-        InvoiceDate: new Date(),
+        InvoiceDate: db.sequelize.fn('GETDATE'),
         InvoiceNumber: invoiceText,
         Total: transferAmount,
         Active: true,
         Remarks: remarks,
-        CreatedBy: 'system',
-        CreatedDate: new Date(),
+        CreatedBy: req.user?.name || 'system',
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalProgress: 0,
         FundsID: sourceFundId,
         TargetID: targetFundId,
-        ApprovalVersion:approvalVersion,
+        ApprovalVersion: approvalVersion,
       }, { transaction: t });
 
       await db.documentType.update(
@@ -366,22 +366,22 @@ exports.savefundtransfer = async (req, res) => {
 
 
 
-exports.transferlist= async (req, res) => {
+exports.transferlist = async (req, res) => {
   try {
-    let totaltransfers=0;
-    let pendingapproval=0
-    let completed=0
-    let totalamount=0
+    let totaltransfers = 0;
+    let pendingapproval = 0
+    let completed = 0
+    let totalamount = 0
     const transfers = await TransactionTable.findAll({
       where: {
         Active: true,
         [Op.and]: sequelize.where(
-    sequelize.fn('LOWER', sequelize.col('APAR')),
-    {
-      [Op.like]: '%fund transfer%'
-    }
-  )
-       
+          sequelize.fn('LOWER', sequelize.col('APAR')),
+          {
+            [Op.like]: '%fund transfer%'
+          }
+        )
+
       },
       include: [
         { model: Funds, as: 'targetFunds' },
@@ -390,8 +390,8 @@ exports.transferlist= async (req, res) => {
       order: [['CreatedDate', 'DESC']]
     });
 
-      const formatted = transfers.map(tr => {
-      const total=parseFloat(tr.Total);
+    const formatted = transfers.map(tr => {
+      const total = parseFloat(tr.Total);
       const sourceBalance = tr.FundSource?.Balance ?? 0;
       const targetBalance = tr.FundTarget?.Balance ?? 0;
 
@@ -426,7 +426,7 @@ exports.transferlist= async (req, res) => {
       }
       totalamount += parseInt(transfer.Total);
     }
-    res.json({ success: true, data: transfers,formatted, totaltransfers, pendingapproval, completed, totalamount });
+    res.json({ success: true, data: transfers, formatted, totaltransfers, pendingapproval, completed, totalamount });
   } catch (err) {
     console.error('Fetch transfer list error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch transfer list', error: err.message });
@@ -437,7 +437,7 @@ async function getLatestApprovalVersion(name) {
   const latest = await ApprovalMatrix.findOne({
     include: [{
       model: db.documentType,
-      as:"DocumentType",
+      as: "DocumentType",
       where: sequelize.where(
         sequelize.fn('LOWER', sequelize.col('DocumentType.Name')),
         'like',
@@ -446,13 +446,13 @@ async function getLatestApprovalVersion(name) {
     }],
     where: { Active: true },
     order: [['Version', 'DESC']],
-    raw:true
+    raw: true
   });
 
   if (!latest || !latest.Version) {
     throw new Error('Version of Approval Workflow doesn’t exist. Create an approval for the document type first!');
   }
-  console.log("latest.Version", latest.Version,latest);
+  console.log("latest.Version", latest.Version, latest);
   return latest.Version;
 }
 

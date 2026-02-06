@@ -1,17 +1,18 @@
 const { Budget } = require('../config/database');
-const budget=Budget
+const budget = Budget
 const { Op } = require('sequelize');
 
-const {getAllWithAssociations}=require("../models/associatedDependency");
-const db=require('../config/database')
-const { sequelize, TransactionTable, Attachment, ApprovalAudit, documentType,ApprovalMatrix } =  require('../config/database');
+const { getAllWithAssociations } = require("../models/associatedDependency");
+const db = require('../config/database')
+const { sequelize, TransactionTable, Attachment, ApprovalAudit, documentType, ApprovalMatrix } = require('../config/database');
 const item = require('../models/item');
 exports.create = async (req, res) => {
   try {
     const { FiscalYearID, FundID, ProjectID, Name, DepartmentID, SubDepartmentID, ChartofAccountsID, Appropriation, TotalAmount, AppropriationBalance, Change, Supplemental, Transfer, Released, AllotmentBalance, ChargedAllotment, PreEncumbrance, Encumbrance, Charges, January, February, March, April, May, June, July, August, September, October, November, December, RevisedAmount, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate } = req.body;
-    const item = await budget.create({ FiscalYearID, FundID, ProjectID, Name, DepartmentID, SubDepartmentID, ChartofAccountsID, Appropriation, TotalAmount, AppropriationBalance, Change, Supplemental, Transfer, Released, AllotmentBalance, ChargedAllotment, PreEncumbrance, Encumbrance, Charges, January, February, March, April, May, June, July, August, September, October, November, December, RevisedAmount, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate });
+    const item = await budget.create({ FiscalYearID, FundID, ProjectID, Name, DepartmentID, SubDepartmentID, ChartofAccountsID, Appropriation, TotalAmount, AppropriationBalance, Change, Supplemental, Transfer, Released, AllotmentBalance, ChargedAllotment, PreEncumbrance, Encumbrance, Charges, January, February, March, April, May, June, July, August, September, October, November, December, RevisedAmount, Active, CreatedBy: req.user.id, CreatedDate: db.sequelize.fn('GETDATE'), ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') });
     res.status(201).json(item);
   } catch (err) {
+    console.error('Budget create error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -19,17 +20,17 @@ exports.create = async (req, res) => {
 exports.getAll = async (req, res) => {
   try {
     const items = await getAllWithAssociations(budget);
-    let totalbalance=0;
-    let totalcharges=0;
-    let totalallotement=0;
-    let totalappropriations=0;
-    let totalbudgets=0;
+    let totalbalance = 0;
+    let totalcharges = 0;
+    let totalallotement = 0;
+    let totalappropriations = 0;
+    let totalbudgets = 0;
     for (let i = 0; i < items.length; i++) {
-      totalbalance += items[i].AppropriationBalance?parseFloat(items[i].AppropriationBalance):0;
-      totalcharges += items[i].Charges?parseFloat(items[i].Charges):0;
-      totalallotement += items[i].AllotmentBalance?parseFloat(items[i].AllotmentBalance):0;
-      totalappropriations += items[i].Appropriation?parseFloat(items[i].Appropriation):0;
-      
+      totalbalance += items[i].AppropriationBalance ? parseFloat(items[i].AppropriationBalance) : 0;
+      totalcharges += items[i].Charges ? parseFloat(items[i].Charges) : 0;
+      totalallotement += items[i].AllotmentBalance ? parseFloat(items[i].AllotmentBalance) : 0;
+      totalappropriations += items[i].Appropriation ? parseFloat(items[i].Appropriation) : 0;
+
     }
     res.json({
       status: true,
@@ -38,9 +39,10 @@ exports.getAll = async (req, res) => {
       totalcharges,
       totalallotement,
       totalappropriations,
-      totalbudgets:items.length
+      totalbudgets: items.length
     });
   } catch (err) {
+    console.error('Budget getAll error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -58,8 +60,8 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { FiscalYearID, FundID, ProjectID, Name, DepartmentID, SubDepartmentID, ChartofAccountsID, Appropriation, TotalAmount, AppropriationBalance, Change, Supplemental, Transfer, Released, AllotmentBalance, ChargedAllotment, PreEncumbrance, Encumbrance, Charges, January, February, March, April, May, June, July, August, September, October, November, December, RevisedAmount, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate } = req.body;
-    const [updated] = await budget.update({ FiscalYearID, FundID, ProjectID, Name, DepartmentID, SubDepartmentID, ChartofAccountsID, Appropriation, TotalAmount, AppropriationBalance, Change, Supplemental, Transfer, Released, AllotmentBalance, ChargedAllotment, PreEncumbrance, Encumbrance, Charges, January, February, March, April, May, June, July, August, September, October, November, December, RevisedAmount, Active, CreatedBy, CreatedDate, ModifyBy, ModifyDate }, {
-      where: { id: req.params.id }
+    const [updated] = await budget.update({ FiscalYearID, FundID, ProjectID, Name, DepartmentID, SubDepartmentID, ChartofAccountsID, Appropriation, TotalAmount, AppropriationBalance, Change, Supplemental, Transfer, Released, AllotmentBalance, ChargedAllotment, PreEncumbrance, Encumbrance, Charges, January, February, March, April, May, June, July, August, September, October, November, December, RevisedAmount, Active, ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') }, {
+      where: { ID: req.params.id }
     });
     if (updated) {
       const updatedItem = await budget.findByPk(req.params.id);
@@ -68,22 +70,24 @@ exports.update = async (req, res) => {
       res.status(404).json({ message: "budget not found" });
     }
   } catch (err) {
+    console.error('Budget update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.delete = async (req, res) => {
   try {
-    const deleted = await budget.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "budget deleted" });
+    const [updated] = await budget.update({ Active: false, ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') }, { where: { ID: req.params.id } });
+    if (updated) res.json({ message: "budget deactivated" });
     else res.status(404).json({ message: "budget not found" });
   } catch (err) {
+    console.error('Budget delete error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 
-exports.createOrUpdateBudgetAllotment=async(req, res)=> {
+exports.createOrUpdateBudgetAllotment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const {
@@ -92,7 +96,7 @@ exports.createOrUpdateBudgetAllotment=async(req, res)=> {
       remarks,
       linkID,
       attachments = [],
-     
+
       fiscalYear,
       departmentId,
       subDepartmentId,
@@ -101,24 +105,24 @@ exports.createOrUpdateBudgetAllotment=async(req, res)=> {
       userId
     } = req.body;
 
-    const budget = await Budget.findOne({ where: { id: budgetId }, transaction: t });
-    if (!budget || !budget.Active) {
+    const budgetRecord = await Budget.findOne({ where: { ID: budgetId }, transaction: t });
+    if (!budgetRecord || !budgetRecord.Active) {
       await t.rollback();
       return res.status(400).json({ message: 'Invalid or inactive budget.' });
     }
 
-    const appropriationBalance = budget.AppropriationBalance;
+    const appropriationBalance = budgetRecord.AppropriationBalance;
     if (parseFloat(amount) > appropriationBalance) {
       await t.rollback();
       return res.status(400).json({ message: 'Allotment exceeds appropriation balance.' });
     }
-    
+
     let isNew = req.body.IsNew === 'true';
     let invoiceNumber = null;
-    const approvalversion=await getLatestApprovalVersion('Budget Allotment',fiscalYear, departmentId, subDepartmentId)
-    const docID=20
+    const approvalversion = await getLatestApprovalVersion('Budget Allotment', fiscalYear, departmentId, subDepartmentId)
+    const docID = 20
     if (isNew) {
-      const docType = await documentType.findOne({ where: { id: docID } });
+      const docType = await documentType.findOne({ where: { ID: docID }, transaction: t });
       invoiceNumber = `${docType.Prefix}-${docType.CurrentNumber}-${docType.Suffix}`;
       await TransactionTable.create({
         LinkID: linkID,
@@ -132,7 +136,7 @@ exports.createOrUpdateBudgetAllotment=async(req, res)=> {
         Total: amount,
         Remarks: remarks,
         CreatedBy: req.user.name,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         RequestedBy: userId,
         Status: 'Requested',
         DocumentTypeID: 20,
@@ -140,20 +144,20 @@ exports.createOrUpdateBudgetAllotment=async(req, res)=> {
         ApprovalProgress: 0,
         ApprovalVersion: approvalversion,
         APAR: 'Allotment Release Order'
-      });
+      }, { transaction: t });
 
-      await docType.update({ CurrentNumber: docType.CurrentNumber + 1 });
+      await docType.update({ CurrentNumber: docType.CurrentNumber + 1 }, { transaction: t });
     } else {
       await TransactionTable.update({
         ModifyBy: req.user.name,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         Total: amount,
         Remarks: remarks,
         ApprovalProgress: 0,
         Status: 'Requested'
-      }, { where: { LinkID: linkID }});
+      }, { where: { LinkID: linkID }, transaction: t });
 
-      await Attachment.destroy({ where: { LinkID: linkID }});
+      await Attachment.destroy({ where: { LinkID: linkID }, transaction: t });
     }
 
     for (const file of attachments) {
@@ -162,7 +166,7 @@ exports.createOrUpdateBudgetAllotment=async(req, res)=> {
         DataImage: file.buffer,
         DataName: file.originalname,
         DataType: file.mimetype
-      });
+      }, { transaction: t });
     }
 
     await ApprovalAudit.create({
@@ -172,23 +176,23 @@ exports.createOrUpdateBudgetAllotment=async(req, res)=> {
       PositionOrEmployeeID: req.user.employeeId,
       SequenceOrder: 1,
       ApprovalOrder: 1,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.name,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: approvalversion
-    });
+    }, { transaction: t });
 
     await t.commit();
     res.status(200).json({ message: 'Budget allotment saved successfully.' });
 
   } catch (err) {
-    await t.rollback();
+    if (t) await t.rollback();
     console.error('Error in budget allotment flow:', err);
     res.status(500).json({ message: 'An error occurred.', error: err.message });
   }
 }
 // async function getLatestApprovalVersion(documentType = 'Budget Allotment', fiscalYear, departmentId, subDepartmentId) {
-  
+
 //   const result = await ApprovalMatrix.findOne({
 //     where: {
 //       DocumentType: documentType,
@@ -213,7 +217,7 @@ async function getLatestApprovalVersion(name) {
   const latest = await ApprovalMatrix.findOne({
     include: [{
       model: db.documentType,
-      as:"DocumentType",
+      as: "DocumentType",
       where: sequelize.where(
         sequelize.fn('LOWER', sequelize.col('DocumentType.Name')),
         'like',
@@ -222,24 +226,24 @@ async function getLatestApprovalVersion(name) {
     }],
     where: { Active: true },
     order: [['Version', 'DESC']],
-    raw:true
+    raw: true
   });
 
   if (!latest || !latest.Version) {
-   return 1.0
+    return 1.0
   }
-  console.log("latest.Version", latest.Version,latest);
+  console.log("latest.Version", latest.Version, latest);
   return latest.Version;
 }
 
-exports.getAllotmentList=async (req, res) => {
+exports.getAllotmentList = async (req, res) => {
   try {
     console.log("getAllotmentList");
-    let totalallotment=0;
-    let totalorders=0;
-    let totalappropriations=0;
-    let remainingbalance=0
-    let PENDING=0;
+    let totalallotment = 0;
+    let totalorders = 0;
+    let totalappropriations = 0;
+    let remainingbalance = 0
+    let PENDING = 0;
     const allotments = await TransactionTable.findAll({
       include: [
         {
@@ -273,20 +277,21 @@ exports.getAllotmentList=async (req, res) => {
     // res.locals.totalappropriations = totalappropriations;
     // res.locals.remainingbalance = remainingbalance;
     // res.locals.PENDING = PENDING;
-    return res.json({ success: true, data: allotments,
+    return res.json({
+      success: true, data: allotments,
       totalallotment,
-      totalorders:allotments.length,
+      totalorders: allotments.length,
       totalappropriations,
       remainingbalance,
       PENDING
-     });
+    });
   } catch (err) {
     console.error('Error loading allotment list:', err);
     return res.status(500).json({ success: false, message: 'Error loading data', error: err.message });
   }
 }
 
-exports.budgetlist=async (req, res) => {
+exports.budgetlist = async (req, res) => {
   try {
     const userDepartmentID = parseInt(req.query.userDepartmentID);
 
@@ -297,28 +302,28 @@ exports.budgetlist=async (req, res) => {
     // if (![1, 2, 3, 4].includes(userDepartmentID)) {
     //   whereClause.DepartmentID = userDepartmentID;
     // }
-     let totalbudget=0;
-    let totalutilized=0;
-    let totalappropriations=0;
-    let remainingbalance=0
-   
+    let totalbudget = 0;
+    let totalutilized = 0;
+    let totalappropriations = 0;
+    let remainingbalance = 0
+
     const budgets = await Budget.findAll({
       include: [
-        { model: db.FiscalYear,as:"FiscalYear" },
-        { model: db.department,as:"Department" },
-        { model: db.subDepartment,as:"SubDepartment" },
-        { model: db.ChartofAccounts,as:"ChartofAccounts" },
-        { model: db.Funds,as:"Funds" },
-        { model: db.Project,as:"Project" }
+        { model: db.FiscalYear, as: "FiscalYear" },
+        { model: db.department, as: "Department" },
+        { model: db.subDepartment, as: "SubDepartment" },
+        { model: db.ChartofAccounts, as: "ChartofAccounts" },
+        { model: db.Funds, as: "Funds" },
+        { model: db.Project, as: "Project" }
       ],
       where: whereClause,
       order: [['CreatedDate', 'DESC']]
     });
     for (let i = 0; i < budgets.length; i++) {
       totalbudget += budgets[i].TotalAmount;
-      let diff=budgets[i].TotalAmount-budgets[i].Released
+      let diff = budgets[i].TotalAmount - budgets[i].Released
       totalutilized += diff
-      totalappropriations +=parseFloat(budgets[i].Appropriation);
+      totalappropriations += parseFloat(budgets[i].Appropriation);
       remainingbalance += parseFloat(budgets[i].AppropriationBalance);
     }
     // res.locals.totalallotment = totalallotment;
@@ -327,12 +332,13 @@ exports.budgetlist=async (req, res) => {
     // res.locals.remainingbalance = remainingbalance;
     // res.locals.PENDING = PENDING;
 
-    return res.json({ success: true, data: budgets,
-      totalbudget:budgets.length,
+    return res.json({
+      success: true, data: budgets,
+      totalbudget: budgets.length,
       totalutilized,
       totalappropriations,
       remainingbalance
-     });
+    });
   } catch (err) {
     console.error('Error loading budget list:', err);
     return res.status(500).json({ success: false, message: 'Error loading budget data', error: err.message });
@@ -343,17 +349,17 @@ function generateLinkID() {
   return new Date().toISOString().replace(/\D/g, '');
 }
 
-exports.saveBudgetSupplemental = async (req,res)=>{
-   // for edit case
-   const {  
-  txtAmount,
-  txtRemarks,
-  lngUser,
-  varID,
-  dtAttachments,
-  isNew,       // boolAdd in VB
-  strUser,
-  varLink  } =req.body
+exports.saveBudgetSupplemental = async (req, res) => {
+  // for edit case
+  const {
+    txtAmount,
+    txtRemarks,
+    lngUser,
+    varID,
+    dtAttachments,
+    isNew,       // boolAdd in VB
+    strUser,
+    varLink } = req.body
   // const { lngUser, strUser, isNew, txtAmount, txtRemarks, txtBudgetID } = req.body;
   if (txtAmount === '0.00') {
     throw new Error('Please enter a valid supplemental value!');
@@ -366,7 +372,7 @@ exports.saveBudgetSupplemental = async (req,res)=>{
 
   try {
     if (isNew) {
-      const docID=2 //21
+      const docID = 2 //21
       const docType = await db.documentType.findByPk(docID);
       invoiceText = `${docType?.Prefix}-${docType?.CurrentNumber}-${docType?.Suffix}`;
 
@@ -439,13 +445,13 @@ exports.saveBudgetSupplemental = async (req,res)=>{
 }
 
 // GET /api/transactions/budget-supplemental
-exports.budgetsupplemental= async (req, res) => {
+exports.budgetsupplemental = async (req, res) => {
   try {
     const transactions = await TransactionTable.findAll({
       include: [
         {
           model: Budget,
-          as:"Budget"
+          as: "Budget"
         }
       ],
       where: {
@@ -489,9 +495,9 @@ function generateLinkID() {
 }
 
 
-exports.saveBudgetTransfer= async (req,res)=> {
+exports.saveBudgetTransfer = async (req, res) => {
 
-   const {
+  const {
     txtAmount1,
     txtAppropriationBalance1,
     txtRemarks1,
@@ -514,7 +520,7 @@ exports.saveBudgetTransfer= async (req,res)=> {
   if (!varID1 || !varID2) throw new Error('Source and Target budget IDs must be selected.');
 
   const t = await sequelize.transaction();
-  const docID=2
+  const docID = 2
   try {
     if (isNew) {
       const docType = await db.documentType.findByPk(docID);
@@ -598,19 +604,19 @@ exports.saveBudgetTransfer= async (req,res)=> {
 }
 exports.budgettransfer = async (req, res) => {
   try {
-    let totaltransefer=0;
-    let pendingapproval=0
-    let approved=0
-    let totalamount=0
+    let totaltransefer = 0;
+    let pendingapproval = 0
+    let approved = 0
+    let totalamount = 0
     const transfers = await TransactionTable.findAll({
       include: [
         {
           model: Budget,
-          as:"Budget"
+          as: "Budget"
         },
-         {
+        {
           model: Budget,
-          as:"Target"
+          as: "Target"
         }
       ],
       where: {
@@ -627,13 +633,13 @@ exports.budgettransfer = async (req, res) => {
     });
     for (let i = 0; i < transfers.length; i++) {
       totaltransefer += parseFloat(transfers[i].Total);
-      if(transfers[i].Status=='Requested'){
-        pendingapproval+=1
+      if (transfers[i].Status == 'Requested') {
+        pendingapproval += 1
       }
-      if(transfers[i].Status=='Approved'){
-        approved+=1
+      if (transfers[i].Status == 'Approved') {
+        approved += 1
       }
-      totalamount+=transfers[i].Total
+      totalamount += transfers[i].Total
     }
     const computedTransfers = transfers.map(record => {
       const t = record.toJSON();
@@ -658,12 +664,13 @@ exports.budgettransfer = async (req, res) => {
         }
       };
     });
-    res.status(200).json({ success: true, data: computedTransfers,
-      totaltransefer:transfers.length,
+    res.status(200).json({
+      success: true, data: computedTransfers,
+      totaltransefer: transfers.length,
       pendingapproval,
       approved,
       totalamount
-     });
+    });
   } catch (error) {
     console.error('Error loading budget transfers:', error);
     res.status(500).json({

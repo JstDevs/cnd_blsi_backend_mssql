@@ -1,18 +1,50 @@
-const { budgetChange } = require('../config/database');
+const db = require('../config/database');
+const { budgetChange } = db;
 
 exports.create = async (req, res) => {
   try {
     const { BudgetID, BudgetTypeID, BudgetFrom, BudgetTo, Amount, Acive, CreatedBy, CreatedDate, ModifyBy, ModifyDate, Name, January, February, March, April, May, June, July, August, September, October, November, December, FiscalYearID, DepartmentID, SubDepartmentID, ChartofAccountsID, Active, TotalAmount } = req.body;
-    const item = await budgetChange.create({ BudgetID, BudgetTypeID, BudgetFrom, BudgetTo, Amount, Acive, CreatedBy, CreatedDate, ModifyBy, ModifyDate, Name, January, February, March, April, May, June, July, August, September, October, November, December, FiscalYearID, DepartmentID, SubDepartmentID, ChartofAccountsID, Active, TotalAmount });
+    const item = await budgetChange.create({
+      BudgetID,
+      BudgetTypeID,
+      BudgetFrom,
+      BudgetTo,
+      Amount,
+      Acive,
+      CreatedBy: req.user.id,
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE'),
+      Name,
+      January,
+      February,
+      March,
+      April,
+      May,
+      June,
+      July,
+      August,
+      September,
+      October,
+      November,
+      December,
+      FiscalYearID,
+      DepartmentID,
+      SubDepartmentID,
+      ChartofAccountsID,
+      Active,
+      TotalAmount
+    });
     res.status(201).json(item);
   } catch (err) {
+    console.error('BudgetChange create error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.getAll = async (req, res) => {
   try {
-    const items = await budgetChange.findAll();
+    const items = await budgetChange.findAll({ where: { Active: true } });
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -32,8 +64,36 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { BudgetID, BudgetTypeID, BudgetFrom, BudgetTo, Amount, Acive, CreatedBy, CreatedDate, ModifyBy, ModifyDate, Name, January, February, March, April, May, June, July, August, September, October, November, December, FiscalYearID, DepartmentID, SubDepartmentID, ChartofAccountsID, Active, TotalAmount } = req.body;
-    const [updated] = await budgetChange.update({ BudgetID, BudgetTypeID, BudgetFrom, BudgetTo, Amount, Acive, CreatedBy, CreatedDate, ModifyBy, ModifyDate, Name, January, February, March, April, May, June, July, August, September, October, November, December, FiscalYearID, DepartmentID, SubDepartmentID, ChartofAccountsID, Active, TotalAmount }, {
-      where: { id: req.params.id }
+    const [updated] = await budgetChange.update({
+      BudgetID,
+      BudgetTypeID,
+      BudgetFrom,
+      BudgetTo,
+      Amount,
+      Acive,
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE'),
+      Name,
+      January,
+      February,
+      March,
+      April,
+      May,
+      June,
+      July,
+      August,
+      September,
+      October,
+      November,
+      December,
+      FiscalYearID,
+      DepartmentID,
+      SubDepartmentID,
+      ChartofAccountsID,
+      Active,
+      TotalAmount
+    }, {
+      where: { ID: req.params.id }
     });
     if (updated) {
       const updatedItem = await budgetChange.findByPk(req.params.id);
@@ -42,16 +102,21 @@ exports.update = async (req, res) => {
       res.status(404).json({ message: "budgetChange not found" });
     }
   } catch (err) {
+    console.error('BudgetChange update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.delete = async (req, res) => {
   try {
-    const deleted = await budgetChange.destroy({ where: { id: req.params.id } });
-    if (deleted) res.json({ message: "budgetChange deleted" });
+    const [updated] = await budgetChange.update(
+      { Active: false, ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') },
+      { where: { ID: req.params.id, Active: true } }
+    );
+    if (updated) res.json({ message: "budgetChange deactivated" });
     else res.status(404).json({ message: "budgetChange not found" });
   } catch (err) {
+    console.error('BudgetChange delete error:', err);
     res.status(500).json({ error: err.message });
   }
 };

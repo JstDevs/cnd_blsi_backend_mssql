@@ -311,18 +311,13 @@ exports.create = async (req, res) => {
           const newEncumbrance = parseFloat(budget.Encumbrance || 0) + subtotal;
           const newBalance = parseFloat(budget.AllotmentBalance || 0) - subtotal;
           await budget.update({
-            Encumbrance: newEncumbrance,
-            AllotmentBalance: newBalance,
-            AppropriationBalance: newBalance
+            Encumbrance: newEncumbrance
           }, { transaction: t });
         } else {
           // Regular requested status
           const newPreEncumbrance = parseFloat(budget.PreEncumbrance || 0) + subtotal;
-          const newBalance = parseFloat(budget.AllotmentBalance || 0) - subtotal;
           await budget.update({
-            PreEncumbrance: newPreEncumbrance,
-            AllotmentBalance: newBalance,
-            AppropriationBalance: newBalance
+            PreEncumbrance: newPreEncumbrance
           }, { transaction: t });
         }
       }
@@ -752,13 +747,6 @@ exports.delete = async (req, res) => {
         });
 
         for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
-          await Budget.increment(
-            {
-              AllotmentBalance: totalAmount,
-              AppropriationBalance: totalAmount
-            },
-            { where: { ID: chargeAccountId }, transaction: t }
-          );
           await Budget.decrement(
             { PreEncumbrance: totalAmount },
             { where: { ID: chargeAccountId }, transaction: t }
@@ -1053,13 +1041,6 @@ exports.rejectTransaction = async (req, res) => {
       });
 
       for (const [chargeAccountId, totalAmount] of Object.entries(budgetUpdates)) {
-        await Budget.increment(
-          {
-            AllotmentBalance: totalAmount,
-            AppropriationBalance: totalAmount
-          },
-          { where: { ID: chargeAccountId }, transaction: t }
-        );
         await Budget.decrement(
           { PreEncumbrance: totalAmount },
           { where: { ID: chargeAccountId }, transaction: t }

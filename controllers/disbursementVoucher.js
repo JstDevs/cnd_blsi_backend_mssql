@@ -397,17 +397,21 @@ exports.save = async (req, res) => {
         const requiredAmount = chargeAccountSums[acctId];
 
         if (budget) {
+          const newCharges = parseFloat(budget.Charges || 0) + requiredAmount;
           if (IsStandaloneRequest) {
+            // Standalone: Increase Charges and update AllotmentBalance
+            // Note: Encumbrance is also updated to keep account balanced
             await budget.update({
               Encumbrance: parseFloat(budget.Encumbrance || 0) + requiredAmount,
-              AllotmentBalance: parseFloat(budget.AllotmentBalance || 0) - requiredAmount,
-              AppropriationBalance: parseFloat(budget.AppropriationBalance || 0) - requiredAmount,
-              Charges: parseFloat(budget.Charges || 0) + requiredAmount
+              AllotmentBalance: parseFloat(budget.Released || 0) - newCharges,
+              Charges: newCharges
             }, { transaction: t });
           } else {
+            // Linked to OBR: Revert Encumbrance to Charges
             await budget.update({
               Encumbrance: parseFloat(budget.Encumbrance || 0) - requiredAmount,
-              Charges: parseFloat(budget.Charges || 0) + requiredAmount
+              AllotmentBalance: parseFloat(budget.Released || 0) - newCharges,
+              Charges: newCharges
             }, { transaction: t });
           }
         }
@@ -1159,10 +1163,14 @@ exports.approve = async (req, res) => {
         }
 
         // Update budget values
+        const currentCharges = parseFloat(budget.Charges || 0);
+        const newCharges = currentCharges + requiredAmount;
+        const currentReleased = parseFloat(budget.Released || 0);
+
         await budget.update({
           Encumbrance: parseFloat(budget.Encumbrance || 0) - requiredAmount,
-          AllotmentBalance: parseFloat(budget.AllotmentBalance || 0) - requiredAmount,
-          Charges: parseFloat(budget.Charges || 0) + requiredAmount
+          AllotmentBalance: currentReleased - newCharges,
+          Charges: newCharges
         }, { transaction: t });
 
         console.log(`[DV Approve] Budget ID ${acctId} AFTER update: Deducted ${requiredAmount} from Encumbrance & AllotmentBalance, Added to Charges`);

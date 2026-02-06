@@ -130,14 +130,17 @@ exports.save = async (req, res) => {
             const encumbrance = parseFloat(budget.Encumbrance || 0);
             const charges = parseFloat(budget.Charges || 0);
 
-            // Interpretation B: 
-            // AllotmentBalance & AppropriationBalance = Available to spend (Total Budget - Obligations)
-            const newBalance = (appropriation + supplemental + newTransfer) - (preEncumbrance + encumbrance + charges);
+            // Interpretation A (User Schema): 
+            // Allotment Balance = Allotment (Released) - Charges
+            // Appropriation Balance = (Appropriation + Supplemental + Transfer) - Allotment (Released)
+            const newTotalBudget = (appropriation + supplemental + newTransfer);
+            const newAllotmentBalance = released - charges;
+            const newAppropriationBalance = newTotalBudget - released;
 
             await budget.update({
               Transfer: newTransfer,
-              AllotmentBalance: newBalance,
-              AppropriationBalance: newBalance,
+              AllotmentBalance: newAllotmentBalance,
+              AppropriationBalance: newAppropriationBalance,
               ModifyBy: userID,
               ModifyDate: db.sequelize.fn('GETDATE')
             }, { transaction: t });

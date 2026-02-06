@@ -25,7 +25,7 @@ exports.create = async (req, res) => {
       Appropriation: initialAppropriation,
       TotalAmount: initialAppropriation,
       AppropriationBalance: initialBalance,
-      AllotmentBalance: initialBalance, // Back to Appropriation-based balance
+      AllotmentBalance: 0, // Starts at 0 until released
       Active,
       CreatedBy: req.user.id,
       CreatedDate: db.sequelize.fn('GETDATE'),

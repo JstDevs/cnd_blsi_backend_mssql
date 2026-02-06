@@ -333,7 +333,8 @@ function initModels(sequelize) {
   Apar.belongsTo(vendor, { as: "Vendor", foreignKey: "VendorID" });
 
   vendorType.hasMany(vendor, { as: "Vendors", foreignKey: "TypeID" });
-  // subDepartment.belongsTo(department, { as: "Department", foreignKey: "DepartmentID"});
+  subDepartment.belongsTo(department, { as: "Department", foreignKey: "DepartmentID" });
+  department.hasMany(subDepartment, { as: "SubDepartments", foreignKey: "DepartmentID" });
   userAccess.hasMany(ModuleAccess, { as: "ModuleAccesses", foreignKey: "UserAccessID" });
   ModuleAccess.belongsTo(Module, { as: "Module", foreignKey: "ModuleID" });
   userAccess.belongsToMany(users, {

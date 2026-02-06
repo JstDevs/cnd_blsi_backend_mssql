@@ -1,11 +1,21 @@
-const { itemUnit } = require('../config/database');
+const db = require('../config/database');
+const itemUnit = db.itemUnit;
 
 exports.create = async (req, res) => {
   try {
     const { Code, Name } = req.body;
-    const item = await itemUnit.create({ Code, Name, Active: true, CreatedBy: req.user.id, CreatedDate: new Date(), ModifyBy: req.user.id, ModifyDate: new Date() });
+    const item = await itemUnit.create({
+      Code,
+      Name,
+      Active: true,
+      CreatedBy: req.user.id,
+      CreatedDate: db.sequelize.fn('GETDATE'),
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    });
     res.status(201).json(item);
   } catch (err) {
+    console.error('ItemUnit create error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -32,8 +42,13 @@ exports.getById = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { Code, Name } = req.body;
-    const [updated] = await itemUnit.update({ Code, Name, ModifyBy: req.user.id, ModifyDate: new Date() }, {
-      where: { id: req.params.id }
+    const [updated] = await itemUnit.update({
+      Code,
+      Name,
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, {
+      where: { ID: req.params.id }
     });
     if (updated) {
       const updatedItem = await itemUnit.findByPk(req.params.id);
@@ -42,21 +57,21 @@ exports.update = async (req, res) => {
       res.status(404).json({ message: "itemUnit not found" });
     }
   } catch (err) {
+    console.error('ItemUnit update error:', err);
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.delete = async (req, res) => {
   try {
-    // const deleted = await itemUnit.destroy({ where: { id: req.params.id } });
-
-    const [updated] = await itemUnit.update( 
-      { Active: false, ModifyBy: req.user.id, ModifyDate: new Date() },
-      { where: { id: req.params.id, Active: true } }
+    const [updated] = await itemUnit.update(
+      { Active: false, ModifyBy: req.user.id, ModifyDate: db.sequelize.fn('GETDATE') },
+      { where: { ID: req.params.id, Active: true } }
     );
     if (updated) res.json({ message: "itemUnit deactivated" });
     else res.status(404).json({ message: "itemUnit not found" });
   } catch (err) {
+    console.error('ItemUnit delete error:', err);
     res.status(500).json({ error: err.message });
   }
 };

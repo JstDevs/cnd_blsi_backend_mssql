@@ -161,7 +161,7 @@ exports.create = async (req, res) => {
           Debit: e.Debit,
           Credit: e.Credit,
           CreatedBy: req.user.id,
-          CreatedDate: new Date(),
+          CreatedDate: db.sequelize.fn('GETDATE'),
           DocumentTypeName: 'Journal Entry Voucher',
           PR: e.PR,
         };
@@ -240,7 +240,7 @@ exports.create = async (req, res) => {
     res.status(201).json({ message: 'success' });
   } catch (err) {
     console.error('❌ Error creating journal entry:', err);
-    await t.rollback();
+    if (t) await t.rollback();
     res.status(500).json({ error: err.message || 'Internal server error' });
   }
 };
@@ -293,6 +293,7 @@ exports.getAll = async (req, res) => {
 
     res.json(result);
   } catch (err) {
+    console.error('❌ Error in getAll journal entries:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -328,6 +329,7 @@ exports.getById = async (req, res) => {
     if (transaction) res.json(transaction);
     else res.status(404).json({ message: "Journal Entry Voucher not found" });
   } catch (err) {
+    console.error('❌ Error in getById journal entry:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -341,6 +343,7 @@ exports.getGLEntries = async (req, res) => {
     });
     res.json(glEntries);
   } catch (err) {
+    console.error('❌ Error in getGLEntries:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -401,6 +404,7 @@ exports.update = async (req, res) => {
       Attachments = []
     } = parsedFields;
 
+    const statusValue = matrixExists ? 'Requested' : 'Posted';
 
     // Check if the record is in a state that allows updates
     const journalRecord = await TransactionTableModel.findOne({ where: { LinkID } });
@@ -472,7 +476,7 @@ exports.update = async (req, res) => {
           Debit: e.Debit,
           Credit: e.Credit,
           CreatedBy: req.user.id,
-          CreatedDate: new Date(),
+          CreatedDate: db.sequelize.fn('GETDATE'),
           DocumentTypeName: 'Journal Entry Voucher',
           PR: e.PR,
         };

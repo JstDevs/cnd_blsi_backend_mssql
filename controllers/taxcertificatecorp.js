@@ -56,7 +56,7 @@ exports.save = async (req, res) => {
       defaults: {
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: db.sequelize.fn('GETDATE')
       }
     });
     const industryTypeId = industryTypeRecord.ID;
@@ -80,11 +80,11 @@ exports.save = async (req, res) => {
         StreetAddress: cleanedAddress,
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Type: 'Corporate',
         PlaceofIncorporation: data.PlaceofIncorporation,
         KindofOrganization: data.KindofOrganization,
-        DateofRegistration: new Date(),
+        DateofRegistration: db.sequelize.fn('GETDATE'),
       }, { transaction: t });
       customerId = customer.ID;
     } else if (
@@ -97,11 +97,11 @@ exports.save = async (req, res) => {
         KindofOrganization: data.KindofOrganization,
         Type: 'Corporate',
         ModifyBy: req.user.id,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
       }, { where: { ID: data.CustomerID }, transaction: t });
       customerId = data.CustomerID;
     }
-              
+
     let statusValue = '';
     const matrixExists = await db.ApprovalMatrix.findOne({
       where: {
@@ -110,8 +110,8 @@ exports.save = async (req, res) => {
       },
       transaction: t
     });
-    statusValue = matrixExists ? 'Requested' : 'Posted';    
-    
+    statusValue = matrixExists ? 'Requested' : 'Posted';
+
 
     const latestapprovalversion = await getLatestApprovalVersion('Community Tax');
 
@@ -133,7 +133,7 @@ exports.save = async (req, res) => {
         Status: statusValue,
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         BusinessEarnings: parseFloat(data.InputOne) || 0,
         OccupationEarnings: parseFloat(data.InputTwo) || 0,
         BusinessTaxDue: parseFloat(data.OutputOne) || 0,
@@ -170,7 +170,7 @@ exports.save = async (req, res) => {
         Remarks: data.Remarks,
         Active: true,
         ModifyBy: req.user.id,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         BusinessEarnings: parseFloat(data.InputOne) || 0,
         OccupationEarnings: parseFloat(data.InputTwo) || 0,
         BusinessTaxDue: parseFloat(data.OutputOne) || 0,
@@ -193,8 +193,8 @@ exports.save = async (req, res) => {
     await t.commit();
     res.status(201).json({ message: 'success' });
   } catch (err) {
-    console.log(err);
-    await t.rollback();
+    console.error('❌ Error in taxcertificatecorp save:', err);
+    if (t) await t.rollback();
     res.status(500).json({ error: err.message || 'Internal server error' });
   }
 };
@@ -209,7 +209,7 @@ exports.getAll = async (req, res) => {
       },
       attributes: {
         include: [
-          [literal(`CONCAT(RequestedByEmployee.FirstName, ' ', RequestedByEmployee.MiddleName, ' ', RequestedByEmployee.LastName)`), 'Employee']
+          [literal(`CONCAT([RequestedByEmployee].[FirstName], ' ', [RequestedByEmployee].[MiddleName], ' ', [RequestedByEmployee].[LastName])`), 'Employee']
         ]
       },
       include: [
@@ -229,7 +229,7 @@ exports.getAll = async (req, res) => {
 
     res.status(200).json(records);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error in taxcertificatecorp getAll:', err);
     res.status(500).json({ error: err.message || 'Failed to fetch data' });
   }
 }
@@ -244,7 +244,7 @@ exports.delete = async (req, res) => {
 
     await TransactionTable.update({
       Status: 'Void',
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
     },
       {
@@ -277,9 +277,9 @@ exports.approve = async (req, res) => {
       PositionorEmployee: 'Employee',
       PositionorEmployeeID: req.user?.employeeID || null,
       SequenceOrder: approvalProgress,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user?.id || null,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 
@@ -306,10 +306,10 @@ exports.reject = async (req, res) => {
     await db.ApprovalAudit.create({
       LinkID: trx.LinkID,
       InvoiceLink: trx.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: req.body.reason || '',
       CreatedBy: trx.CreatedBy,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 

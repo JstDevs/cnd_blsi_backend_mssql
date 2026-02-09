@@ -69,11 +69,11 @@ exports.saveTransaction = async (req, res) => {
     const refID = IsNew ? generateLinkID() : data.LinkID;
     const latestapprovalversion = await getLatestApprovalVersion('Marriage Receipt');
 
-    // needed data
-    data.CustomerID = data.CustometID || data.CustomerID !== '' ? data.CustomerID : null;
+    // sanitized data
+    data.CustomerID = data.CustomerID && data.CustomerID !== '' ? data.CustomerID : null;
     data.MarytoID = data.MarytoID && data.MarytoID !== '' ? data.MarytoID : null;
     data.Total = data.Total && data.Total !== '' ? parseFloat(data.Total) : 0;
-    data.CustomerAge = data.CustomerAge && data.CustomerAge !== '' ? parseInt(data.CustomerAge) : null;
+    data.CustomerAge = data.CustomerAge && data.CustomerAge !== '' ? parseInt(data.CustomerAge) : 0;
     data.MarrytoAge = data.MarrytoAge && data.MarrytoAge !== '' ? parseInt(data.MarrytoAge) : 0;
 
     // ------------------ Create New Payor ------------------
@@ -237,8 +237,8 @@ exports.saveTransaction = async (req, res) => {
     await t.commit();
     res.status(201).json({ message: 'success' });
   } catch (error) {
-    console.error('Error saving:', error);
-    await t.rollback();
+    console.error('❌ Error in saveMarriageTransaction:', error);
+    if (t) await t.rollback();
     res.status(500).json({ error: error.message });
   }
 }
@@ -282,6 +282,7 @@ exports.getAll = async (req, res) => {
 
     res.json(results);
   } catch (err) {
+    console.error('❌ Error in getAll marriage records:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -330,7 +331,7 @@ exports.delete = async (req, res) => {
 
   } catch (error) {
     if (t) await t.rollback();
-    console.error('Error voiding transaction:', error);
+    console.error('❌ Error in delete marriage record:', error);
     return res.status(500).json({ error: error.message || 'Server error.' });
   }
 };
@@ -361,6 +362,7 @@ exports.approve = async (req, res) => {
     await t.commit();
     res.json({ message: 'Transaction approved successfully.' });
   } catch (error) {
+    console.error('❌ Error in marriage approve:', error);
     await t.rollback();
     res.status(500).json({ error: error.message });
   }
@@ -393,6 +395,7 @@ exports.reject = async (req, res) => {
     res.json({ message: 'Transaction rejected successfully.' });
 
   } catch (error) {
+    console.error('❌ Error in marriage reject:', error);
     await t.rollback();
     res.status(500).json({ error: error.message });
   }

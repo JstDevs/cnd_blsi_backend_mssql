@@ -69,6 +69,13 @@ exports.saveTransaction = async (req, res) => {
     const refID = IsNew ? generateLinkID() : data.LinkID;
     const latestapprovalversion = await getLatestApprovalVersion('Marriage Receipt');
 
+    // needed data
+    data.CustomerID = data.CustometID || data.CustomerID !== '' ? data.CustomerID : null;
+    data.MarytoID = data.MarytoID && data.MarytoID !== '' ? data.MarytoID : null;
+    data.Total = data.Total && data.Total !== '' ? parseFloat(data.Total) : 0;
+    data.CustomerAge = data.CustomerAge && data.CustomerAge !== '' ? parseInt(data.CustomerAge) : null;
+    data.MarrytoAge = data.MarrytoAge && data.MarrytoAge !== '' ? parseInt(data.MarrytoAge) : 0;
+
     // ------------------ Create New Payor ------------------
     if (IsNew && !data.CustomerID && data.CustomerName) {
       try {
@@ -77,9 +84,9 @@ exports.saveTransaction = async (req, res) => {
           Name: data.CustomerName,
           Active: true,
           CreatedBy: req.user.id,
-          CreatedDate: new Date(),
+          CreatedDate: db.sequelize.fn('GETDATE'),
           ModifyBy: req.user.id,
-          ModifyDate: new Date()
+          ModifyDate: db.sequelize.fn('GETDATE')
         }, { transaction: t });
         data.CustomerID = newCustomer.ID;
       } catch (err) {
@@ -96,9 +103,9 @@ exports.saveTransaction = async (req, res) => {
           Name: data.MarrytoName,
           Active: true,
           CreatedBy: req.user.id,
-          CreatedDate: new Date(),
+          CreatedDate: db.sequelize.fn('GETDATE'),
           ModifyBy: req.user.id,
-          ModifyDate: new Date()
+          ModifyDate: db.sequelize.fn('GETDATE')
         }, { transaction: t });
         data.MarytoID = newSpouse.ID; // Update the ID variable you use for creating the record
       } catch (err) {
@@ -123,7 +130,7 @@ exports.saveTransaction = async (req, res) => {
         Status: statusValue,
         Active: 1,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Credit: data.Total,
         Debit: data.Total,
         VATExcludedPrice: data.Total,
@@ -174,7 +181,7 @@ exports.saveTransaction = async (req, res) => {
         Status: statusValue,
         Active: 1,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Credit: 0,
         Debit: data.Total,
         VATExcludedPrice: data.Total,
@@ -312,9 +319,9 @@ exports.delete = async (req, res) => {
       SequenceOrder: trx.ApprovalProgress || 0,
       ApprovalOrder: 0,
       Remarks: "Voided",
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion || "1"
     }, { transaction: t });
 
@@ -345,9 +352,9 @@ exports.approve = async (req, res) => {
       PositionorEmployeeID: req.user.employeeID,
       SequenceOrder: trx.ApprovalProgress,
       ApprovalOrder: 0,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 
@@ -376,9 +383,9 @@ exports.reject = async (req, res) => {
       PositionorEmployeeID: req.user.employeeID,
       SequenceOrder: trx.ApprovalProgress,
       ApprovalOrder: 0,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 

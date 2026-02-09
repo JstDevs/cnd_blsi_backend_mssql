@@ -9,7 +9,11 @@ const generateLinkID = require("../utils/generateID")
 
 exports.addPresentList = async (req, res) => {
   try {
-    const { tdNumber, generalRevisionYear } = req.query;
+    const tdNumber = req.query.tdNumber;
+    let generalRevisionYear = req.query.generalRevisionYear;
+
+    // Sanitize: If frontend sends "undefined" as a string, treat it as null
+    if (generalRevisionYear === 'undefined') generalRevisionYear = null;
 
     const record = await PropertyTaxDeclaration.findOne({
       where: {
@@ -33,7 +37,11 @@ exports.addPresentList = async (req, res) => {
 
 exports.getTDNumbersByOwner = async (req, res) => {
   try {
-    const { ownerId, generalRevision } = req.query;
+    const ownerId = req.query.ownerId;
+    let generalRevision = req.query.generalRevision;
+
+    // Sanitize: Handle "undefined" string from frontend
+    if (generalRevision === 'undefined') generalRevision = null;
 
     if (!ownerId || !generalRevision) {
       return res.status(400).json({ message: "ownerId and generalRevision are required" });
@@ -77,9 +85,15 @@ exports.save = async (req, res) => {
       throw new Error('Invalid value for IsNew. Expected true or false.');
     }
 
+    // Sanitization for numeric and ID fields
+    data.ownerId = data.ownerId && data.ownerId !== '' ? data.ownerId : null;
+    data.FundsID = data.FundsID && data.FundsID !== '' ? data.FundsID : null;
+    data.AmountReceived = data.AmountReceived && data.AmountReceived !== '' ? parseFloat(data.AmountReceived) : 0;
+    data.RemainingBalance = data.RemainingBalance && data.RemainingBalance !== '' ? parseFloat(data.RemainingBalance) : 0;
+    data.AdvancedYear = data.AdvancedYear && data.AdvancedYear !== '' ? data.AdvancedYear : null;
+
     const docID = 11;
     const refID = IsNew ? generateLinkID() : data.LinkID;
-    // const latestapprovalversion=await getLatestApprovalVersion('Real Property Tax');
 
     let statusValue = '';
     const matrixExists = await db.ApprovalMatrix.findOne({
@@ -101,9 +115,9 @@ exports.save = async (req, res) => {
           Name: data.CustomerName,
           Active: true,
           CreatedBy: req.user.id,
-          CreatedDate: new Date(),
+          CreatedDate: db.sequelize.fn('GETDATE'),
           ModifyBy: req.user.id,
-          ModifyDate: new Date()
+          ModifyDate: db.sequelize.fn('GETDATE')
         }, { transaction: t });
         data.ownerId = newCustomer.ID;
         console.log('New Customer created with ID:', newCustomer.ID);
@@ -129,16 +143,14 @@ exports.save = async (req, res) => {
         CheckNumber: data.CheckNumber,
         T_D_No: data.T_D_No,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Paid: paid,
         AdvancedYear: data.AdvancedYear,
         AdvanceFunds: data.AdvanceFunds,
         FundsID: data.FundsID,
         ReceivedFrom: data.ReceivedFrom,
-        GeneralRevision: new Date().getFullYear().toString(),
+        GeneralRevision: new Date().getFullYear(), // Removed .toString() for INTEGER column
         Active: 1,
-        // ApprovalProgress: 0,
-        // ApprovalVersion: latestapprovalversion
       }, { transaction: t });
 
       // Previous Payment Items
@@ -161,7 +173,7 @@ exports.save = async (req, res) => {
             Total: p.Total,
             Present: 0,
             RequestedBy: req.user.id,
-            CreatedDate: new Date(),
+            CreatedDate: db.sequelize.fn('GETDATE'),
             CreatedBy: req.user.id
           }, { transaction: t });
         }
@@ -191,7 +203,7 @@ exports.save = async (req, res) => {
             Present: 1,
             RemainingBalance: p.RemainingBalance,
             RequestedBy: req.user.id,
-            CreatedDate: new Date(),
+            CreatedDate: db.sequelize.fn('GETDATE'),
             CreatedBy: req.user.id
           }, { transaction: t });
         }
@@ -216,13 +228,13 @@ exports.save = async (req, res) => {
         CheckNumber: data.CheckNumber,
         T_D_No: data.T_D_No,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Paid: paid,
         AdvancedYear: data.AdvancedYear,
         AdvanceFunds: data.AdvanceFunds,
         FundsID: data.FundsID,
         ReceivedFrom: data.ReceivedFrom,
-        GeneralRevision: new Date().getFullYear().toString(),
+        GeneralRevision: new Date().getFullYear(),
         Active: 1,
         // ApprovalProgress: 0,
         // ApprovalVersion: latestapprovalversion
@@ -249,7 +261,7 @@ exports.save = async (req, res) => {
             Total: p.Total,
             Present: 0,
             RequestedBy: req.user.id,
-            CreatedDate: new Date(),
+            CreatedDate: db.sequelize.fn('GETDATE'),
             CreatedBy: req.user.id
           }, { transaction: t });
         }
@@ -279,7 +291,7 @@ exports.save = async (req, res) => {
             Present: 1,
             RemainingBalance: p.RemainingBalance,
             RequestedBy: req.user.id,
-            CreatedDate: new Date(),
+            CreatedDate: db.sequelize.fn('GETDATE'),
             CreatedBy: req.user.id
           }, { transaction: t });
         }
@@ -290,8 +302,8 @@ exports.save = async (req, res) => {
     res.status(201).json({ message: 'success' });
 
   } catch (err) {
-    console.error('Transaction Save Error:', err);
-    await t.rollback();
+    console.error('❌ Transaction Save Error:', err);
+    if (t) await t.rollback();
     res.status(500).json({ error: err.message });
   }
 };
@@ -314,7 +326,7 @@ exports.list = async (req, res) => {
 
     res.status(200).json(results);
   } catch (error) {
-    console.error('Error loading:', error);
+    console.error('❌ Error in RPT list:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch RPT transaction list' });
   }
 };
@@ -423,7 +435,7 @@ exports.postTransaction = async (req, res) => {
         Credit: 0,
         DocumentTypeName: "Community Tax",
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: db.sequelize.fn('GETDATE')
       },
     ];
 
@@ -442,7 +454,7 @@ exports.postTransaction = async (req, res) => {
         RejectionDate: null,
         Remarks: null,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalVersion: varTransactionApprovalVersion,
       },
       { transaction: t }
@@ -481,10 +493,10 @@ exports.rejectTransaction = async (req, res) => {
     await ApprovalAudit.create(
       {
         LinkID: approvalLinkID,
-        RejectionDate: new Date(),
+        RejectionDate: db.sequelize.fn('GETDATE'),
         Remarks: reasonForRejection,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
       },
       { transaction: t }
     );
@@ -528,10 +540,10 @@ exports.void = async (req, res) => {
       {
         LinkID: generateLinkID(),
         InvoiceLink: transaction.LinkID,
-        RejectionDate: new Date(),
+        RejectionDate: db.sequelize.fn('GETDATE'),
         Remarks: "Real Property Tax Receipt Voided by User",
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
       },
       { transaction: t }
     )

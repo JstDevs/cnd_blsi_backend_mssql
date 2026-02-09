@@ -80,6 +80,13 @@ const saveBurialTransaction = async (req, res) => {
 
     const invoiceNumber = IsNew ? (Number(documentTypeRecord.CurrentNumber) + 1) : data.InvoiceNumber;
 
+    // Sanitize numeric and ID fields
+    data.CustomerID = data.CustomerID && data.CustomerID !== '' ? data.CustomerID : null;
+    data.DeceasedCustomerID = data.DeceasedCustomerID && data.DeceasedCustomerID !== '' ? data.DeceasedCustomerID : null;
+    data.Total = data.Total && data.Total !== '' ? parseFloat(data.Total) : 0;
+    data.Age = data.Age && data.Age !== '' ? parseInt(data.Age) : 0;
+    data.DeathDate = data.DeathDate && data.DeathDate !== '' ? data.DeathDate : null;
+
     if (IsNew && !data.CustomerID && data.CustomerName) {
       try {
         console.log('Creating new Payor:', data.CustomerName);
@@ -87,9 +94,9 @@ const saveBurialTransaction = async (req, res) => {
           Name: data.CustomerName,
           Active: true,
           CreatedBy: req.user.id,
-          CreatedDate: new Date(),
+          CreatedDate: db.sequelize.fn('GETDATE'),
           ModifyBy: req.user.id,
-          ModifyDate: new Date()
+          ModifyDate: db.sequelize.fn('GETDATE')
         }, { transaction: t });
         data.CustomerID = newCustomer.ID;
       } catch (err) {
@@ -105,27 +112,9 @@ const saveBurialTransaction = async (req, res) => {
           Name: data.DeceasedCustomerName,
           Active: true,
           CreatedBy: req.user.id,
-          CreatedDate: new Date(),
+          CreatedDate: db.sequelize.fn('GETDATE'),
           ModifyBy: req.user.id,
-          ModifyDate: new Date()
-        }, { transaction: t });
-        data.DeceasedCustomerID = newDeceased.ID; // Update ID for the receipt
-      } catch (err) {
-        console.error('Error creating deceased:', err);
-      }
-    }
-
-    // ---------------- Create New Deceased if needed ----------------
-    if (IsNew && !data.DeceasedCustomerID && data.DeceasedCustomerName) {
-      try {
-        console.log('Creating New Deceased:', data.DeceasedCustomerName);
-        const newDeceased = await Customer.create({
-          Name: data.DeceasedCustomerName,
-          Active: true,
-          CreatedBy: req.user.id,
-          CreatedDate: new Date(),
-          ModifyBy: req.user.id,
-          ModifyDate: new Date()
+          ModifyDate: db.sequelize.fn('GETDATE')
         }, { transaction: t });
         data.DeceasedCustomerID = newDeceased.ID; // Update ID for the receipt
       } catch (err) {
@@ -151,7 +140,7 @@ const saveBurialTransaction = async (req, res) => {
         Status: statusValue,
         Active: 1,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Credit: data.Total,
         Debit: data.Total,
         EWT: 0,
@@ -207,7 +196,7 @@ const saveBurialTransaction = async (req, res) => {
         Status: statusValue,
         Active: 1,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         Credit: data.Total,
         Debit: data.Total,
         EWT: 0,
@@ -316,6 +305,7 @@ const getAll = async (req, res) => {
 
     res.json(results);
   } catch (err) {
+    console.error('❌ Error in getAll burial records:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -327,6 +317,7 @@ const getById = async (req, res) => {
     if (item) res.json(item);
     else res.status(404).json({ message: "BurialRecord not found" });
   } catch (err) {
+    console.error('❌ Error in getById burial record:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -353,10 +344,10 @@ const deleteRecord = async (req, res) => {
     await ApprovalAudit.create({
       LinkID: trx.LinkID,
       InvoiceLink: trx.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: 'Voided',
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 
@@ -387,9 +378,9 @@ const approve = async (req, res) => {
       PositionorEmployeeID: req.user.employeeID,
       SequenceOrder: trx.ApprovalProgress,
       ApprovalOrder: 0,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 
@@ -416,10 +407,10 @@ const reject = async (req, res) => {
     await ApprovalAudit.create({
       LinkID: trx.LinkID,
       InvoiceLink: trx.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: reason,
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion
     }, { transaction: t });
 

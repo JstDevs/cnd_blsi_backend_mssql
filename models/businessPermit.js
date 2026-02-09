@@ -198,9 +198,19 @@ module.exports = function (sequelize, DataTypes) {
             type: DataTypes.STRING(50),
             defaultValue: 'Requested',
         },
+        createdAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'createdAt'
+        },
+        updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'updatedAt'
+        },
     }, {
         sequelize,
         tableName: 'business_permits',
-        timestamps: true,
+        timestamps: false,
     });
 };

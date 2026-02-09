@@ -44,20 +44,38 @@ exports.create = async (req, res) => {
         },
         transaction: t
     });
-        
+
     statusValue = matrixExists ? 'Requested' : 'Posted';
     req.body.status = statusValue;
-    
-    try {        
+
+    try {
         const data = req.body;
 
-        // Logic to handle attachments if they are uploaded separately or handled here
-        // For now, assuming data comes in as a JSON body (attachments might be URLs or handled via multer)
+        // Sanitize numeric fields
+        data.businessArea = data.businessArea && data.businessArea !== '' ? parseFloat(data.businessArea) : 0;
+        data.totalEmployees = data.totalEmployees && data.totalEmployees !== '' ? parseInt(data.totalEmployees) : 0;
+        data.employeesResidingWithLgli = data.employeesResidingWithLgli && data.employeesResidingWithLgli !== '' ? parseInt(data.employeesResidingWithLgli) : 0;
+        data.monthlyRental = data.monthlyRental && data.monthlyRental !== '' ? parseFloat(data.monthlyRental) : 0;
+        data.numberOfUnits = data.numberOfUnits && data.numberOfUnits !== '' ? parseInt(data.numberOfUnits) : 0;
+        data.capitalization = data.capitalization && data.capitalization !== '' ? parseFloat(data.capitalization) : 0;
+        data.grossSales = data.grossSales && data.grossSales !== '' ? parseFloat(data.grossSales) : 0;
 
-        const newPermit = await BusinessPermit.create(data);
+        // Handle potential empty date strings
+        data.dateOfApplication = data.dateOfApplication && data.dateOfApplication !== '' ? data.dateOfApplication : null;
+        data.dtiSecCdaRegistrationDate = data.dtiSecCdaRegistrationDate && data.dtiSecCdaRegistrationDate !== '' ? data.dtiSecCdaRegistrationDate : null;
+
+        const newPermit = await BusinessPermit.create({
+            ...data,
+            status: statusValue,
+            createdAt: db.sequelize.fn('GETDATE'),
+            updatedAt: db.sequelize.fn('GETDATE')
+        }, { transaction: t });
+
+        await t.commit();
         res.status(201).json(newPermit);
     } catch (error) {
-        console.error('Error creating business permit:', error);
+        if (t) await t.rollback();
+        console.error('❌ Error creating business permit:', error);
         res.status(500).json({ message: 'Failed to create business permit', error: error.message });
     }
 };
@@ -68,18 +86,34 @@ exports.update = async (req, res) => {
         const { id } = req.params;
         const data = req.body;
 
+        // Sanitize numeric fields
+        if (data.businessArea !== undefined) data.businessArea = data.businessArea && data.businessArea !== '' ? parseFloat(data.businessArea) : 0;
+        if (data.totalEmployees !== undefined) data.totalEmployees = data.totalEmployees && data.totalEmployees !== '' ? parseInt(data.totalEmployees) : 0;
+        if (data.employeesResidingWithLgli !== undefined) data.employeesResidingWithLgli = data.employeesResidingWithLgli && data.employeesResidingWithLgli !== '' ? parseInt(data.employeesResidingWithLgli) : 0;
+        if (data.monthlyRental !== undefined) data.monthlyRental = data.monthlyRental && data.monthlyRental !== '' ? parseFloat(data.monthlyRental) : 0;
+        if (data.numberOfUnits !== undefined) data.numberOfUnits = data.numberOfUnits && data.numberOfUnits !== '' ? parseInt(data.numberOfUnits) : 0;
+        if (data.capitalization !== undefined) data.capitalization = data.capitalization && data.capitalization !== '' ? parseFloat(data.capitalization) : 0;
+        if (data.grossSales !== undefined) data.grossSales = data.grossSales && data.grossSales !== '' ? parseFloat(data.grossSales) : 0;
+
+        // Handle potential empty date strings
+        if (data.dateOfApplication !== undefined) data.dateOfApplication = data.dateOfApplication && data.dateOfApplication !== '' ? data.dateOfApplication : null;
+        if (data.dtiSecCdaRegistrationDate !== undefined) data.dtiSecCdaRegistrationDate = data.dtiSecCdaRegistrationDate && data.dtiSecCdaRegistrationDate !== '' ? data.dtiSecCdaRegistrationDate : null;
+
         const permit = await BusinessPermit.findByPk(id);
         if (!permit) {
             return res.status(404).json({ message: 'Business permit not found' });
         }
 
-        await permit.update(data);
+        await permit.update({
+            ...data,
+            updatedAt: db.sequelize.fn('GETDATE')
+        });
 
         // Fetch updated record
         const updatedPermit = await BusinessPermit.findByPk(id);
         res.status(200).json(updatedPermit);
     } catch (error) {
-        console.error('Error updating business permit:', error);
+        console.error('❌ Error updating business permit:', error);
         res.status(500).json({ message: 'Failed to update business permit', error: error.message });
     }
 };
@@ -107,9 +141,9 @@ exports.delete = async (req, res) => {
             SequenceOrder: 0,
             ApprovalOrder: 0,
             Remarks: "Voided",
-            RejectionDate: new Date(), // Using RejectionDate to store void date for audit
+            RejectionDate: db.sequelize.fn('GETDATE'), // Using RejectionDate to store void date for audit
             CreatedBy: req.user.id,
-            CreatedDate: new Date(),
+            CreatedDate: db.sequelize.fn('GETDATE'),
             ApprovalVersion: "1"
         }, { transaction: t });
 
@@ -142,9 +176,9 @@ exports.approve = async (req, res) => {
             PositionorEmployeeID: req.user.employeeID,
             SequenceOrder: 0,
             ApprovalOrder: 0,
-            ApprovalDate: new Date(),
+            ApprovalDate: db.sequelize.fn('GETDATE'),
             CreatedBy: req.user.id,
-            CreatedDate: new Date(),
+            CreatedDate: db.sequelize.fn('GETDATE'),
             ApprovalVersion: "1"
         }, { transaction: t });
 
@@ -178,9 +212,9 @@ exports.reject = async (req, res) => {
             SequenceOrder: 0,
             ApprovalOrder: 0,
             Remarks: reason,
-            RejectionDate: new Date(),
+            RejectionDate: db.sequelize.fn('GETDATE'),
             CreatedBy: req.user.id,
-            CreatedDate: new Date(),
+            CreatedDate: db.sequelize.fn('GETDATE'),
             ApprovalVersion: "1"
         }, { transaction: t });
 

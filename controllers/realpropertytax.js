@@ -44,7 +44,7 @@ exports.getTDNumbersByOwner = async (req, res) => {
     if (generalRevision === 'undefined') generalRevision = null;
 
     if (!ownerId || !generalRevision) {
-      return res.status(400).json({ message: "ownerId and generalRevision are required" });
+      return res.status(200).json([]);
     }
 
     // ✅ Fetch matching TD numbers

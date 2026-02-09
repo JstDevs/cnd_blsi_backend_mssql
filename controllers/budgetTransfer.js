@@ -17,6 +17,33 @@ const generateLinkID = require("../utils/generateID")
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 const validateApproval = require('../utils/validateApproval');
 
+const updateBudgetBalances = async (budgetID, amountDelta, userID, transaction) => {
+  const budget = await BudgetModel.findByPk(budgetID, { transaction });
+  if (budget) {
+    const currentTransfer = parseFloat(budget.Transfer || 0);
+    const newTransfer = currentTransfer + amountDelta;
+
+    const appropriation = parseFloat(budget.Appropriation || 0);
+    const supplemental = parseFloat(budget.Supplemental || 0);
+    const released = parseFloat(budget.Released || 0);
+
+    // Correct Formula:
+    // AppropriationBalance = (Appropriation + Supplemental + newTransfer) - Released
+    // AllotmentBalance = Released - Charges (We don't change this here as it's not affected by transfers)
+    const newAppropriationBalance = (appropriation + supplemental + newTransfer) - released;
+
+    await budget.update({
+      Transfer: newTransfer,
+      AppropriationBalance: newAppropriationBalance,
+      ModifyBy: userID,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, { transaction });
+    console.log(`[budgetTransfer.updateBudgetBalances] Budget ${budgetID} updated. New Transfer: ${newTransfer}, New Appr. Balance: ${newAppropriationBalance}`);
+  } else {
+    console.warn(`[budgetTransfer.updateBudgetBalances] Budget ${budgetID} not found.`);
+  }
+};
+
 exports.save = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
@@ -55,7 +82,7 @@ exports.save = async (req, res) => {
     if ((data.IsNew == "true") || (data.IsNew === true) || (data.IsNew == '1') || (data.IsNew == 1)) {
       IsNew = true;
     }
-    else if ((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 0)) {
+    else if ((data.IsNew == "false") || (data.IsNew === false) || (data.IsNew == '0') || (data.IsNew == 1)) {
       IsNew = false;
     }
     else {
@@ -74,7 +101,7 @@ exports.save = async (req, res) => {
     const doc = await DocumentTypeModel.findByPk(docTypeID, { transaction: t });
     if (!doc) throw new Error(`Document type ID ${docTypeID} not found.`);
 
-    const invoiceText = `${doc.Prefix}-${String(doc.CurrentNumber).padStart(5, '0')}-${doc.Suffix}`;
+    const invoiceText = IsNew ? `${doc.Prefix}-${String(doc.CurrentNumber).padStart(5, '0')}-${doc.Suffix}` : data.InvoiceNumber;
     let statusValue = '';
     const matrixExists = await db.ApprovalMatrix.findOne({
       where: {
@@ -101,7 +128,7 @@ exports.save = async (req, res) => {
         Remarks: data.Remarks,
         CreatedBy: userID,
         CreatedDate: db.sequelize.fn('GETDATE'),
-        ApprovalProgress: 0,
+        ApprovalProgress: statusValue === 'Posted' ? 100 : 0,
         BudgetID: data.BudgetID,
         TargetID: data.TargetID,
         ApprovalVersion: approvalVersion
@@ -111,45 +138,6 @@ exports.save = async (req, res) => {
         { CurrentNumber: doc.CurrentNumber + 1 },
         { where: { ID: docTypeID }, transaction: t }
       );
-
-      // --- UPDATE Budget Tables IF AUTO-POSTED ---
-      if (statusValue === 'Posted') {
-        const sourceBudgetID = data.BudgetID;
-        const targetBudgetID = data.TargetID;
-
-        const updateBudgetBalances = async (budgetID, amountDelta) => {
-          const budget = await BudgetModel.findByPk(budgetID, { transaction: t });
-          if (budget) {
-            const currentTransfer = parseFloat(budget.Transfer || 0);
-            const newTransfer = currentTransfer + amountDelta;
-
-            const appropriation = parseFloat(budget.Appropriation || 0);
-            const supplemental = parseFloat(budget.Supplemental || 0);
-            const released = parseFloat(budget.Released || 0);
-            const preEncumbrance = parseFloat(budget.PreEncumbrance || 0);
-            const encumbrance = parseFloat(budget.Encumbrance || 0);
-            const charges = parseFloat(budget.Charges || 0);
-
-            // Interpretation A (User Schema): 
-            // Allotment Balance = Allotment (Released) - Charges
-            // Appropriation Balance = (Appropriation + Supplemental + Transfer) - Allotment (Released)
-            const newTotalBudget = (appropriation + supplemental + newTransfer);
-            const newAllotmentBalance = released - charges;
-            const newAppropriationBalance = newTotalBudget - released;
-
-            await budget.update({
-              Transfer: newTransfer,
-              AllotmentBalance: newAllotmentBalance,
-              AppropriationBalance: newAppropriationBalance,
-              ModifyBy: userID,
-              ModifyDate: db.sequelize.fn('GETDATE')
-            }, { transaction: t });
-          }
-        };
-
-        if (sourceBudgetID) await updateBudgetBalances(sourceBudgetID, -amount);
-        if (targetBudgetID) await updateBudgetBalances(targetBudgetID, amount);
-      }
     } else {
       await TransactionTableModel.update({
         ModifyBy: userID,
@@ -158,12 +146,23 @@ exports.save = async (req, res) => {
         Remarks: data.Remarks,
         BudgetID: data.BudgetID,
         TargetID: data.TargetID,
-        ApprovalProgress: 0,
+        ApprovalProgress: statusValue === 'Posted' ? 100 : 0,
         Status: statusValue
       }, {
         where: { LinkID },
         transaction: t
       });
+    }
+
+    // --- UPDATE Budget Tables IF AUTO-POSTED (New or Update) ---
+    if (statusValue === 'Posted') {
+      const sourceBudgetID = data.BudgetID;
+      const targetBudgetID = data.TargetID;
+
+      console.log('[budgetTransfer.save] Auto-posting. Updating budgets:', { sourceBudgetID, targetBudgetID, amount });
+
+      if (sourceBudgetID) await updateBudgetBalances(sourceBudgetID, -amount, userID, t);
+      if (targetBudgetID) await updateBudgetBalances(targetBudgetID, amount, userID, t);
     }
 
 
@@ -309,31 +308,8 @@ exports.delete = async (req, res) => {
       const targetBudgetID = transaction.TargetID;
       const transferAmount = parseFloat(transaction.Total || 0);
 
-      const updateBudgetBalances = async (budgetID, amountDelta) => {
-        const budget = await BudgetModel.findByPk(budgetID, { transaction: t });
-        if (budget) {
-          const currentTransfer = parseFloat(budget.Transfer || 0);
-          const newTransfer = currentTransfer + amountDelta;
-
-          const appropriation = parseFloat(budget.Appropriation || 0);
-          const supplemental = parseFloat(budget.Supplemental || 0);
-          const released = parseFloat(budget.Released || 0);
-
-          const newAdjusted = appropriation + supplemental + newTransfer;
-          const newBalance = newAdjusted - released;
-
-          await budget.update({
-            Transfer: newTransfer,
-            AllotmentBalance: newBalance,
-            AppropriationBalance: newBalance,
-            ModifyBy: userID,
-            ModifyDate: db.sequelize.fn('GETDATE')
-          }, { transaction: t });
-        }
-      };
-
-      if (sourceBudgetID) await updateBudgetBalances(sourceBudgetID, transferAmount); // Increment back source
-      if (targetBudgetID) await updateBudgetBalances(targetBudgetID, -transferAmount); // Decrement back target
+      if (sourceBudgetID) await updateBudgetBalances(sourceBudgetID, transferAmount, userID, t); // Increment back source
+      if (targetBudgetID) await updateBudgetBalances(targetBudgetID, -transferAmount, userID, t); // Decrement back target
     }
 
     // --- VOID Transaction ---
@@ -461,44 +437,14 @@ exports.approveTransaction = async (req, res) => {
 
       console.log('[budgetTransfer.approveTransaction] Final approval reached. Updating budgets:', { sourceBudgetID, targetBudgetID, transferAmount });
 
-      const updateBudgetBalances = async (budgetID, amountDelta) => {
-        const budget = await BudgetModel.findByPk(budgetID, { transaction: t });
-        if (budget) {
-          const currentTransfer = parseFloat(budget.Transfer || 0);
-          const newTransfer = currentTransfer + amountDelta;
-
-          const appropriation = parseFloat(budget.Appropriation || 0);
-          const supplemental = parseFloat(budget.Supplemental || 0);
-          const released = parseFloat(budget.Released || 0);
-
-          // Adjusted Appropriation = Appropriation + Supplemental + Transfer
-          const newAdjusted = appropriation + supplemental + newTransfer;
-          const newBalance = newAdjusted - released;
-
-          await BudgetModel.update(
-            {
-              Transfer: newTransfer,
-              AllotmentBalance: newBalance,
-              AppropriationBalance: newBalance,
-              ModifyBy: req.user.id,
-              ModifyDate: db.sequelize.fn('GETDATE')
-            },
-            { where: { ID: budgetID }, transaction: t }
-          );
-          console.log(`[budgetTransfer.approveTransaction] Budget ${budgetID} updated. New Transfer: ${newTransfer}, New Balance: ${newBalance}`);
-        } else {
-          console.warn(`[budgetTransfer.approveTransaction] Budget ${budgetID} not found.`);
-        }
-      };
-
       // Update source budget (deduct)
       if (sourceBudgetID) {
-        await updateBudgetBalances(sourceBudgetID, -transferAmount);
+        await updateBudgetBalances(sourceBudgetID, -transferAmount, req.user.id, t);
       }
 
       // Update target budget (add)
       if (targetBudgetID) {
-        await updateBudgetBalances(targetBudgetID, transferAmount);
+        await updateBudgetBalances(targetBudgetID, transferAmount, req.user.id, t);
       }
     }
 

@@ -16,6 +16,30 @@ const { Op } = require('sequelize');
 const generateLinkID = require("../utils/generateID")
 const getLatestApprovalVersion = require('../utils/getLatestApprovalVersion');
 
+const updateFundBalances = async (fundID, amountDelta, userID, transaction) => {
+  const fund = await FundModel.findByPk(fundID, { transaction });
+  if (fund) {
+    const currentBalance = parseFloat(fund.Balance || 0);
+    const currentTotal = parseFloat(fund.Total || 0);
+
+    const newBalance = currentBalance + amountDelta;
+    const newTotal = currentTotal + amountDelta;
+
+    await FundModel.update(
+      {
+        Balance: newBalance,
+        Total: newTotal,
+        ModifyBy: userID,
+        ModifyDate: db.sequelize.fn('GETDATE')
+      },
+      { where: { ID: fundID }, transaction }
+    );
+    console.log(`[fundTransfer.updateFundBalances] Fund ${fundID} updated. New Balance: ${newBalance}`);
+  } else {
+    console.warn(`[fundTransfer.updateFundBalances] Fund ${fundID} not found.`);
+  }
+};
+
 exports.save = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
@@ -88,7 +112,7 @@ exports.save = async (req, res) => {
       Remarks: data.Remarks,
       CreatedBy: userID,
       CreatedDate: db.sequelize.fn('GETDATE'),
-      ApprovalProgress: 0,
+      ApprovalProgress: statusValue === 'Posted' ? 100 : 0,
       FundsID: data.FundsID,
       TargetID: data.TargetID,
       ApprovalVersion: approvalVersion
@@ -100,6 +124,20 @@ exports.save = async (req, res) => {
       { where: { ID: docTypeID }, transaction: t }
     );
 
+    // --- UPDATE Fund Balances IF AUTO-POSTED ---
+    if (statusValue === 'Posted') {
+      const sourceFundID = data.FundsID;
+      const targetFundID = data.TargetID;
+
+      console.log('[fundTransfer.save] Auto-posting. Updating funds:', { sourceFundID, targetFundID, transferAmount });
+
+      if (sourceFundID) {
+        await updateFundBalances(sourceFundID, -transferAmount, userID, t);
+      }
+      if (targetFundID) {
+        await updateFundBalances(targetFundID, transferAmount, userID, t);
+      }
+    }
 
     // Attachment handling
     const existingIDs = Attachments.filter(att => att.ID).map(att => att.ID);
@@ -197,23 +235,8 @@ exports.delete = async (req, res) => {
       const targetFundID = transaction.TargetID;
       const transferAmount = parseFloat(transaction.Total || 0);
 
-      const updateFundBalances = async (fundID, amountDelta) => {
-        const fund = await FundModel.findByPk(fundID, { transaction: t });
-        if (fund) {
-          const currentBalance = parseFloat(fund.Balance || 0);
-          const currentTotal = parseFloat(fund.Total || 0);
-
-          await FundModel.update({
-            Balance: currentBalance + amountDelta,
-            Total: currentTotal + amountDelta,
-            ModifyBy: userID,
-            ModifyDate: db.sequelize.fn('GETDATE')
-          }, { where: { ID: fundID }, transaction: t });
-        }
-      };
-
-      if (sourceFundID) await updateFundBalances(sourceFundID, transferAmount); // Increment back source
-      if (targetFundID) await updateFundBalances(targetFundID, -transferAmount); // Decrement back target
+      if (sourceFundID) await updateFundBalances(sourceFundID, transferAmount, userID, t); // Increment back source
+      if (targetFundID) await updateFundBalances(targetFundID, -transferAmount, userID, t); // Decrement back target
     }
 
     // --- VOID Transaction ---
@@ -309,40 +332,14 @@ exports.approve = async (req, res) => {
     const targetFundID = transaction.TargetID;
     const transferAmount = parseFloat(transaction.Total || 0);
 
-    console.log('[fundTransfer.approve] Updating funds:', { sourceFundID, targetFundID, transferAmount });
-
-    const updateFundBalances = async (fundID, amountDelta) => {
-      const fund = await FundModel.findByPk(fundID, { transaction: t });
-      if (fund) {
-        const currentBalance = parseFloat(fund.Balance || 0);
-        const currentTotal = parseFloat(fund.Total || 0);
-
-        const newBalance = currentBalance + amountDelta;
-        const newTotal = currentTotal + amountDelta;
-
-        await FundModel.update(
-          {
-            Balance: newBalance,
-            Total: newTotal,
-            ModifyBy: req.user.id,
-            ModifyDate: db.sequelize.fn('GETDATE')
-          },
-          { where: { ID: fundID }, transaction: t }
-        );
-        console.log(`[fundTransfer.approve] Fund ${fundID} updated. New Balance: ${newBalance}`);
-      } else {
-        console.warn(`[fundTransfer.approve] Fund ${fundID} not found.`);
-      }
-    };
-
     // Update source fund (deduct)
     if (sourceFundID) {
-      await updateFundBalances(sourceFundID, -transferAmount);
+      await updateFundBalances(sourceFundID, -transferAmount, req.user.id, t);
     }
 
     // Update target fund (add)
     if (targetFundID) {
-      await updateFundBalances(targetFundID, transferAmount);
+      await updateFundBalances(targetFundID, transferAmount, req.user.id, t);
     }
 
     // --- 4. Commit ---

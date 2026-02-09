@@ -60,6 +60,18 @@ async function saveTransaction(req, res) {
 
     const { PayorType } = parsedFields;
 
+    // Sanitize numeric and ID fields
+    CustomerID = CustomerID && CustomerID !== '' ? CustomerID : null;
+    FundsID = FundsID && FundsID !== '' ? FundsID : null;
+    PaymentMethodID = PaymentMethodID && PaymentMethodID !== '' ? PaymentMethodID : null;
+    Total = Total && Total !== '' ? parseFloat(Total) : 0;
+    AmountReceived = AmountReceived && AmountReceived !== '' ? parseFloat(AmountReceived) : 0;
+    WithheldAmount = WithheldAmount && WithheldAmount !== '' ? parseFloat(WithheldAmount) : 0;
+    Vat_Total = Vat_Total && Vat_Total !== '' ? parseFloat(Vat_Total) : 0;
+    Discounts = Discounts && Discounts !== '' ? parseFloat(Discounts) : 0;
+    AmountDue = AmountDue && AmountDue !== '' ? parseFloat(AmountDue) : 0;
+    VATExcludedPrice = VATExcludedPrice && VATExcludedPrice !== '' ? parseFloat(VATExcludedPrice) : 0;
+
     let {
       IsNew,
       LinkID,
@@ -238,32 +250,32 @@ async function saveTransaction(req, res) {
       await TransactionItems.create({
         UniqueID: UniqueID,
         LinkID,
-        ItemID: row.ItemID,
-        ChargeAccountID: row.ChargeAccountID,
-        Quantity: parseFloat(row.Quantity),
-        ItemUnitID: row.ItemUnitID,
-        Price: parseFloat(row.Price),
-        TAXCodeID: row.TAXCodeID,
+        ItemID: row.ItemID && row.ItemID !== '' ? row.ItemID : null,
+        ChargeAccountID: row.ChargeAccountID && row.ChargeAccountID !== '' ? row.ChargeAccountID : null,
+        Quantity: parseFloat(row.Quantity) || 0,
+        ItemUnitID: row.ItemUnitID && row.ItemUnitID !== '' ? row.ItemUnitID : null,
+        Price: parseFloat(row.Price) || 0,
+        TAXCodeID: row.TAXCodeID && row.TAXCodeID !== '' ? row.TAXCodeID : null,
         TaxName: row.TaxName,
-        TaxRate: parseFloat(row.TaxRate),
-        Sub_Total_Vat_Ex: parseFloat(row.Sub_Total_Vat_Ex),
+        TaxRate: parseFloat(row.TaxRate) || 0,
+        Sub_Total_Vat_Ex: parseFloat(row.Sub_Total_Vat_Ex) || 0,
         Active: true,
         CreatedBy: req.user.id,
         CreatedDate: db.sequelize.fn('GETDATE'),
-        Credit: parseFloat(row.Credit),
-        Debit: parseFloat(row.Debit),
-        Vat_Total: parseFloat(row.Vat_Total),
-        EWT: parseFloat(row.EWT),
-        WithheldAmount: parseFloat(row.WithheldAmount),
-        Sub_Total: parseFloat(row.Sub_Total),
-        EWTRate: parseFloat(row.EWTRate),
-        Discounts: parseFloat(row.Discounts),
-        DiscountRate: parseFloat(row.DiscountRate),
-        AmountDue: parseFloat(row.AmountDue),
-        PriceVatExclusive: parseFloat(row.PriceVatExclusive),
+        Credit: parseFloat(row.Credit) || 0,
+        Debit: parseFloat(row.Debit) || 0,
+        Vat_Total: parseFloat(row.Vat_Total) || 0,
+        EWT: parseFloat(row.EWT) || 0,
+        WithheldAmount: parseFloat(row.WithheldAmount) || 0,
+        Sub_Total: parseFloat(row.Sub_Total) || 0,
+        EWTRate: parseFloat(row.EWTRate) || 0,
+        Discounts: parseFloat(row.Discounts) || 0,
+        DiscountRate: parseFloat(row.DiscountRate) || 0,
+        AmountDue: parseFloat(row.AmountDue) || 0,
+        PriceVatExclusive: parseFloat(row.PriceVatExclusive) || 0,
         Remarks: row.Remarks,
         FPP: row.FPP,
-        Discounted: parseFloat(row.Discounted),
+        Discounted: parseFloat(row.Discounted) || 0,
         InvoiceNumber: invoiceNumber,
         NormalBalance: row.NormalBalance,
         Vatable: row.Vatable
@@ -404,7 +416,7 @@ const getCurrentNumber = async (req, res) => {
 
     res.status(200).json({ CurrentNumber: incrementedValue });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error getting current number:', err);
     res.status(500).json({ error: err.message || 'Failed to fetch current number' });
   }
 };

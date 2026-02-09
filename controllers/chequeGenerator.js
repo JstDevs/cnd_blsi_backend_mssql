@@ -108,7 +108,7 @@ exports.save = async (req, res) => {
         Remarks: data.Remarks,
         Active: true,
         CreatedBy: userID,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         ApprovalProgress: 0,
         ApprovalVersion: approvalVersion
       }, { transaction: t });
@@ -173,7 +173,7 @@ exports.save = async (req, res) => {
         Remarks: data.Remarks,
         Active: true,
         ModifyBy: userID,
-        ModifyDate: new Date(),
+        ModifyDate: db.sequelize.fn('GETDATE'),
         ApprovalProgress: 0,
         ApprovalVersion: approvalVersion
       }, {
@@ -225,7 +225,7 @@ exports.save = async (req, res) => {
     if (!IsNew && existingIDs.length > 0) {
       await AttachmentModel.destroy({
         where: {
-          LinkID: LinkID,
+          LinkID: refID,
           ID: { [Op.notIn]: existingIDs }
         },
         transaction: t
@@ -235,7 +235,7 @@ exports.save = async (req, res) => {
     // Add new attachments
     if (req.files && req.files.length > 0) {
       const newAttachments = req.files.map(file => ({
-        LinkID: LinkID,
+        LinkID: refID,
         DataName: file.originalname,
         DataType: file.mimetype,
         DataImage: `${req.uploadPath}/${file.filename}`
@@ -294,7 +294,7 @@ exports.delete = async (req, res) => {
     await check.update({
       Status: 'Void',
       ModifyBy: req.user.id,
-      ModifyDate: new Date()
+      ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // --- Update Fund Balance if previously Posted ---
@@ -350,10 +350,10 @@ exports.delete = async (req, res) => {
     await ApprovalAuditModel.create({
       LinkID: generateLinkID(),
       InvoiceLink: check.LinkID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: "Cheque Voided by User",
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: check.ApprovalVersion
     }, { transaction: t });
 
@@ -437,9 +437,9 @@ exports.approve = async (req, res) => {
       PositionorEmployeeID: req.user.employeeID,
       SequenceOrder: check.ApprovalProgress,
       ApprovalOrder: 0,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: check.ApprovalVersion
     }, { transaction: t });
 
@@ -507,10 +507,10 @@ exports.reject = async (req, res) => {
       PositionorEmployeeID: req.user.employeeID,
       SequenceOrder: check.ApprovalProgress,
       ApprovalOrder: 0,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: reason || '',
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: check.ApprovalVersion
     }, { transaction: t });
 

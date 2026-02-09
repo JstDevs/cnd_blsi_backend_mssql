@@ -128,7 +128,7 @@ exports.save = async (req, res) => {
           Description: 'Temporary department for employees pending complete details',
           Active: true,
           CreatedBy: req.user.id,
-          CreatedDate: new Date()
+          CreatedDate: db.sequelize.fn('GETDATE')
         }, { transaction: t });
       }
 
@@ -317,7 +317,7 @@ exports.save = async (req, res) => {
         Sub_Total_Vat_Ex: itm.subtotalTaxExcluded,
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Credit: credit,
         Debit: debit,
         Vat_Total: itm.vat,

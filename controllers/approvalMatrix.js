@@ -41,9 +41,9 @@ exports.create = async (req, res) => {
       Version: approvalVersion,
       Active: true,
       CreatedBy: req.user.id,
-      CreatedDate: new Date(),
+      CreatedDate: sequelize.fn('GETDATE'),
       AlteredBy: req.user.id,
-      AlteredDate: new Date()
+      AlteredDate: sequelize.fn('GETDATE')
     }, { transaction: t });
 
     // Step 2: Create Approver rows
@@ -146,7 +146,7 @@ exports.update = async (req, res) => {
         AllorMajority,
         NumberofApprover,
         AlteredBy: req.user.id,
-        AlteredDate: new Date(),
+        AlteredDate: sequelize.fn('GETDATE'),
       },
       { where: { ID: id }, transaction }
     );
@@ -269,9 +269,9 @@ exports.bulkUpdate = async (req, res) => {
         // Simplicity: this whole set IS the current version.
         Active: true,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedDate: sequelize.fn('GETDATE'),
         AlteredBy: req.user.id,
-        AlteredDate: new Date()
+        AlteredDate: sequelize.fn('GETDATE')
       }, { transaction });
 
       // Create associated approvers

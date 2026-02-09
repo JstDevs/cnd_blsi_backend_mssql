@@ -29,7 +29,7 @@ exports.save = async (req, res) => {
       },
       transaction: t
     });
-    
+
     statusValue = matrixExists ? 'Requested' : 'Posted';
 
     if (IsNew) {
@@ -45,7 +45,8 @@ exports.save = async (req, res) => {
         PostingPeriod: data.PostingPeriod,
         Remarks: data.Remarks,
         CreatedBy: req.user.id,
-        CreatedDate: new Date(),
+        CreatedBy: req.user.id,
+        CreatedDate: db.sequelize.fn('GETDATE'),
         Active: true
       }, { transaction: t });
 
@@ -55,7 +56,7 @@ exports.save = async (req, res) => {
         Status: statusValue,
         APAR: 'Public Market Ticketing',
         DocumentTypeID: docID,
-        InvoiceDate: new Date(),
+        InvoiceDate: db.sequelize.fn('GETDATE'),
         Total: data.AmountIssued,
         FundsID: 1,
         Active: true // Set Active to true to satisfy default scope
@@ -164,7 +165,7 @@ exports.delete = async (req, res) => {
         InvoiceLink: ticket.LinkID,
         Remarks: "Transaction Voided by User",
         CreatedBy: req.user.id,
-        CreatedDate: new Date()
+        CreatedDate: db.sequelize.fn('GETDATE')
       },
       { transaction: t }
     );
@@ -218,9 +219,9 @@ exports.approve = async (req, res) => {
       LinkID: generateLinkID(),
       InvoiceLink: ticket.LinkID,
       PositionorEmployeeID: req.user.employeeID,
-      ApprovalDate: new Date(),
+      ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
-      CreatedDate: new Date()
+      CreatedDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     await t.commit();
@@ -267,10 +268,10 @@ exports.reject = async (req, res) => {
       LinkID: generateLinkID(),
       InvoiceLink: ticket.LinkID,
       PositionorEmployeeID: req.user.employeeID,
-      RejectionDate: new Date(),
+      RejectionDate: db.sequelize.fn('GETDATE'),
       Remarks: req.body.Remarks || "Rejected by user",
       CreatedBy: req.user.id,
-      CreatedDate: new Date()
+      CreatedDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
 
     await t.commit();

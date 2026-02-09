@@ -337,14 +337,20 @@ exports.delete = async (req, res) => {
           const appropriation = parseFloat(budget.Appropriation || 0);
           const supplemental = parseFloat(budget.Supplemental || 0);
           const transfer = parseFloat(budget.Transfer || 0);
+          const charges = parseFloat(budget.Charges || 0);
 
-          const newAllotmentBalance = (appropriation + supplemental + transfer) - newReleased;
+          // Correct formulas:
+          // AppropriationBalance = (Appropriation + Supplemental + Transfer) - Released
+          // AllotmentBalance = Released - Charges
+          const newTotalBudget = appropriation + supplemental + transfer;
+          const newAllotmentBalance = newReleased - charges;
+          const newAppropriationBalance = newTotalBudget - newReleased;
 
           await budget.update(
             {
               Released: newReleased,
               AllotmentBalance: newAllotmentBalance,
-              AppropriationBalance: newAllotmentBalance,
+              AppropriationBalance: newAppropriationBalance,
               ModifyBy: userID,
               ModifyDate: db.sequelize.fn('GETDATE')
             },
@@ -483,20 +489,26 @@ exports.approveTransaction = async (req, res) => {
           const appropriation = parseFloat(budget.Appropriation || 0);
           const supplemental = parseFloat(budget.Supplemental || 0);
           const transfer = parseFloat(budget.Transfer || 0);
+          const charges = parseFloat(budget.Charges || 0);
 
-          const newAllotmentBalance = (appropriation + supplemental + transfer) - newReleased;
+          // Correct formulas:
+          // AppropriationBalance = (Appropriation + Supplemental + Transfer) - Released
+          // AllotmentBalance = Released - Charges
+          const newTotalBudget = appropriation + supplemental + transfer;
+          const newAllotmentBalance = newReleased - charges;
+          const newAppropriationBalance = newTotalBudget - newReleased;
 
           await BudgetModel.update(
             {
               Released: newReleased,
               AllotmentBalance: newAllotmentBalance,
-              AppropriationBalance: newAllotmentBalance,
+              AppropriationBalance: newAppropriationBalance,
               ModifyBy: req.user.id,
               ModifyDate: db.sequelize.fn('GETDATE')
             },
             { where: { ID: bID }, transaction: t }
           );
-          console.log('[BudgetAllotment.approveTransaction] Budget updated:', { newReleased, newAllotmentBalance });
+          console.log('[BudgetAllotment.approveTransaction] Budget updated:', { newReleased, newAllotmentBalance, newAppropriationBalance });
         }
       }
     }

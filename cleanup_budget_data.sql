@@ -16,40 +16,40 @@ BEGIN TRANSACTION;
 DELETE FROM [TransactionItems] 
 WHERE LinkID IN (
     SELECT LinkID FROM [TransactionTable] 
-    WHERE DocumentTypeID IN (13, 14, 20, 21, 22)
+    WHERE DocumentTypeID IN (13, 14, 20, 21, 22, 31)
 );
 
 -- Attachments
 DELETE FROM [Attachment] 
 WHERE LinkID IN (
     SELECT LinkID FROM [TransactionTable] 
-    WHERE DocumentTypeID IN (13, 14, 20, 21, 22)
+    WHERE DocumentTypeID IN (13, 14, 20, 21, 22, 31)
 );
 
 -- Approval Audit Logs
 DELETE FROM [ApprovalAudit] 
 WHERE InvoiceLink IN (
     SELECT LinkID FROM [TransactionTable] 
-    WHERE DocumentTypeID IN (13, 14, 20, 21, 22)
+    WHERE DocumentTypeID IN (13, 14, 20, 21, 22, 31)
 );
 
 -- Contra Accounts (Relevant for DV)
 DELETE FROM [ContraAccount] 
 WHERE LinkID IN (
     SELECT LinkID FROM [TransactionTable] 
-    WHERE DocumentTypeID IN (13, 14, 20, 21, 22)
+    WHERE DocumentTypeID IN (13, 14, 20, 21, 22, 31)
 );
 
 -- General Ledger Entries
 DELETE FROM [GeneralLedger] 
 WHERE LinkID IN (
     SELECT LinkID FROM [TransactionTable] 
-    WHERE DocumentTypeID IN (13, 14, 20, 21, 22)
+    WHERE DocumentTypeID IN (13, 14, 20, 21, 22, 31)
 );
 
 -- 2. Burahin ang mismong mga Transactions
 DELETE FROM [TransactionTable] 
-WHERE DocumentTypeID IN (13, 14, 20, 21, 22);
+WHERE DocumentTypeID IN (13, 14, 20, 21, 22, 31);
 
 -- 3. I-reset ang Budget Balances sa Initial State (Interpretation B)
 -- Dahil AllotmentBalance starts as Appropriation (Total Available)

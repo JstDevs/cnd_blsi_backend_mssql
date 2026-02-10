@@ -100,7 +100,7 @@ exports.create = async (req, res) => {
     });
 
     statusValue = matrixExists ? 'Requested' : 'Posted';
-    const latestApprovalVersion = await getLatestApprovalVersion('Allotment Release Order');
+    const latestApprovalVersion = await getLatestApprovalVersion('Travel Order');
 
     await TransactionTableModel.create({
       LinkID,
@@ -546,6 +546,8 @@ exports.delete = async (req, res) => {
   }
 };
 
+const validateApproval = require('../utils/validateApproval');
+
 exports.approveTransaction = async (req, res) => {
   const t = await db.sequelize.transaction();
 
@@ -587,9 +589,30 @@ exports.approveTransaction = async (req, res) => {
       return res.status(400).json({ error: 'Travel order is already approved' });
     }
 
-    // Update status to Approved
+    // --- Validate Approval Logic ---
+    // User object construction for validator
+    const userForValidation = {
+      employeeID: req.user.employeeID,
+      userAccessIDs: req.user.userAccessIDs || [] // Ensure this exists in your auth middleware or mock it
+    };
+
+    const validationResult = await validateApproval({
+      documentTypeID: 15, // Travel Order Document ID
+      approvalVersion: transactionRecord.ApprovalVersion,
+      totalAmount: transactionRecord.Total || 0,
+      transactionLinkID: linkID,
+      user: userForValidation
+    });
+
+    if (!validationResult.canApprove) {
+      await t.rollback();
+      return res.status(400).json({ error: validationResult.error });
+    }
+
+    // Update Transaction Status & Progress
     await transactionRecord.update({
-      Status: 'Posted',
+      Status: validationResult.nextStatus, // 'Posted' or 'Requested'
+      ApprovalProgress: validationResult.nextSequence,
       ModifyBy: req.user.id,
       ModifyDate: db.sequelize.fn('GETDATE')
     }, { transaction: t });
@@ -597,10 +620,13 @@ exports.approveTransaction = async (req, res) => {
     // Log the approval in ApprovalAudit
     const ApprovalAuditModel = require('../config/database').ApprovalAudit;
     await ApprovalAuditModel.create({
-      LinkID: generateLinkID(),
+      LinkID: linkID,
       InvoiceLink: linkID,
-      PositionEmployee: 'Employee',
-      PositionEmployeeID: req.user.employeeID,
+      PositionEmployee: 'Employee', // or differentiate based on validation? validationResult doesn't return *which* rule matched, simplifying to 'Employee' for now or 'Position'
+      // Ideally we'd know if it was matched by Position or Employee, but for audit purposes 'Employee' + ID is often sufficient trace.
+      // Let's stick to what was there or generic. 'Employee' seems to be the convention in previous code.
+      PositionorEmployeeID: req.user.employeeID,
+      SequenceOrder: validationResult.currentSequence, // The level being approved
       ApprovalDate: db.sequelize.fn('GETDATE'),
       Remarks: 'Travel Order Approved',
       CreatedBy: req.user.id,
@@ -609,7 +635,13 @@ exports.approveTransaction = async (req, res) => {
     }, { transaction: t });
 
     await t.commit();
-    res.json({ success: true, message: 'Travel Order approved successfully' });
+
+    // Return specific message based on status
+    const message = validationResult.nextStatus === 'Posted'
+      ? 'Travel Order approved and POSTED successfully'
+      : 'Travel Order approved (Partial). Waiting for next level.';
+
+    res.json({ success: true, message });
 
   } catch (err) {
     await t.rollback();

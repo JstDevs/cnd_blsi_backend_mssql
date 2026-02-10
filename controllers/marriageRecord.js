@@ -336,22 +336,63 @@ exports.delete = async (req, res) => {
   }
 };
 
+const validateApproval = require('../utils/validateApproval');
+
 exports.approve = async (req, res) => {
   const { ID } = req.body;
   const t = await sequelize.transaction();
   try {
     const trx = await TransactionTable.findOne({ where: { ID }, transaction: t });
 
-    if (!trx) throw new Error('Transaction not found.');
+    if (!trx) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Transaction not found.' });
+    }
 
-    await trx.update({ Status: 'Posted' }, { transaction: t });
+    if (trx.Status === 'Void') {
+      await t.rollback();
+      return res.status(400).json({ error: 'Cannot approve a voided transaction' });
+    }
 
+    if (trx.Status === 'Approved' || trx.Status === 'Posted') {
+      await t.rollback();
+      return res.status(400).json({ error: 'Transaction is already approved' });
+    }
+
+    // --- Validate Approval Logic ---
+    const userForValidation = {
+      employeeID: req.user.employeeID,
+      userAccessIDs: req.user.userAccessIDs || []
+    };
+
+    const validationResult = await validateApproval({
+      documentTypeID: 19, // Marriage Receipt Document ID
+      approvalVersion: trx.ApprovalVersion,
+      totalAmount: trx.Total || 0,
+      transactionLinkID: trx.LinkID,
+      user: userForValidation
+    });
+
+    if (!validationResult.canApprove) {
+      await t.rollback();
+      return res.status(400).json({ error: validationResult.error });
+    }
+
+    // Update Transaction
+    await trx.update({
+      Status: validationResult.nextStatus,
+      ApprovalProgress: validationResult.nextSequence,
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, { transaction: t });
+
+    // Log Approval
     await ApprovalAudit.create({
       LinkID: trx.LinkID,
       InvoiceLink: trx.LinkID,
       PositionorEmployee: "Employee",
       PositionorEmployeeID: req.user.employeeID,
-      SequenceOrder: trx.ApprovalProgress,
+      SequenceOrder: validationResult.currentSequence,
       ApprovalOrder: 0,
       ApprovalDate: db.sequelize.fn('GETDATE'),
       CreatedBy: req.user.id,
@@ -360,7 +401,13 @@ exports.approve = async (req, res) => {
     }, { transaction: t });
 
     await t.commit();
-    res.json({ message: 'Transaction approved successfully.' });
+
+    const message = validationResult.nextStatus === 'Posted'
+      ? 'Marriage Receipt approved and POSTED successfully.'
+      : 'Marriage Receipt approved (Partial). Waiting for next level.';
+
+    res.json({ success: true, message });
+
   } catch (error) {
     console.error('❌ Error in marriage approve:', error);
     await t.rollback();
@@ -369,23 +416,41 @@ exports.approve = async (req, res) => {
 };
 
 exports.reject = async (req, res) => {
-  const { ID } = req.body;
+  const { ID, reason } = req.body; // Ensure reason is desctructured if sent
   const t = await sequelize.transaction();
   try {
     const trx = await TransactionTable.findOne({ where: { ID }, transaction: t });
 
-    if (!trx) throw new Error('Transaction not found.');
+    if (!trx) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Transaction not found.' });
+    }
 
-    await trx.update({ Status: 'Rejected' }, { transaction: t });
+    if (trx.Status === 'Void') {
+      await t.rollback();
+      return res.status(400).json({ error: 'Cannot reject a voided transaction' });
+    }
+
+    if (trx.Status === 'Rejected') {
+      await t.rollback();
+      return res.status(400).json({ error: 'Transaction is already rejected' });
+    }
+
+    await trx.update({
+      Status: 'Rejected',
+      ModifyBy: req.user.id,
+      ModifyDate: db.sequelize.fn('GETDATE')
+    }, { transaction: t });
 
     await ApprovalAudit.create({
       LinkID: trx.LinkID,
       InvoiceLink: trx.LinkID,
       PositionorEmployee: "Employee",
       PositionorEmployeeID: req.user.employeeID,
-      SequenceOrder: trx.ApprovalProgress,
+      SequenceOrder: trx.ApprovalProgress || 0,
       ApprovalOrder: 0,
-      ApprovalDate: db.sequelize.fn('GETDATE'),
+      RejectionDate: db.sequelize.fn('GETDATE'), // Use RejectionDate
+      Remarks: reason || 'Rejected',
       CreatedBy: req.user.id,
       CreatedDate: db.sequelize.fn('GETDATE'),
       ApprovalVersion: trx.ApprovalVersion

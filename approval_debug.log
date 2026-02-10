@@ -1,0 +1,85 @@
+[2026-02-10T06:27:07.990Z] Starting bulkUpdate
+[2026-02-10T06:27:07.991Z] Payload: {
+  "DocumentTypeID": "15",
+  "sequences": [
+    {
+      "SequenceLevel": 1,
+      "AllorMajority": "ALL",
+      "NumberofApprover": 1,
+      "approvers": [
+        {
+          "PositionorEmployee": "Position",
+          "PositionorEmployeeID": "2",
+          "AmountFrom": 1,
+          "AmountTo": 1000000000000000000
+        }
+      ]
+    },
+    {
+      "SequenceLevel": 2,
+      "AllorMajority": "ALL",
+      "NumberofApprover": 1,
+      "approvers": [
+        {
+          "PositionorEmployee": "Employee",
+          "PositionorEmployeeID": "6",
+          "AmountFrom": 1,
+          "AmountTo": 999999999999999
+        }
+      ]
+    }
+  ]
+}
+[2026-02-10T06:27:08.001Z] Found existing IDs to delete: []
+[2026-02-10T06:27:08.002Z] Processing sequence: {"SequenceLevel":1,"AllorMajority":"ALL","NumberofApprover":1,"approvers":[{"PositionorEmployee":"Position","PositionorEmployeeID":"2","AmountFrom":1,"AmountTo":1000000000000000000}]}
+[2026-02-10T06:27:08.013Z] Created matrix ID: 10
+[2026-02-10T06:27:08.013Z] Creating approvers: [{"LinkID":"10","PositionorEmployee":"Position","PositionorEmployeeID":"2","AmountFrom":1,"AmountTo":1000000000000000000}]
+[2026-02-10T06:27:08.024Z] ERROR: Arithmetic overflow error converting numeric to data type numeric.
+[2026-02-10T06:27:08.025Z] STACK: Error
+    at Query.run (C:\c and d\backend\node_modules\sequelize\lib\dialects\mssql\query.js:107:25)
+    at C:\c and d\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async MSSqlQueryInterface.bulkInsert (C:\c and d\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:346:21)
+    at async recursiveBulkCreate (C:\c and d\backend\node_modules\sequelize\lib\model.js:1697:25)
+    at async Approvers.bulkCreate (C:\c and d\backend\node_modules\sequelize\lib\model.js:1786:12)
+    at async exports.bulkUpdate (C:\c and d\backend\controllers\approvalMatrix.js:305:9)
+[2026-02-10T06:29:15.259Z] Starting bulkUpdate
+[2026-02-10T06:29:15.260Z] Payload: {
+  "DocumentTypeID": "15",
+  "sequences": [
+    {
+      "SequenceLevel": 1,
+      "AllorMajority": "ALL",
+      "NumberofApprover": 1,
+      "approvers": [
+        {
+          "PositionorEmployee": "Position",
+          "PositionorEmployeeID": "2",
+          "AmountFrom": 1,
+          "AmountTo": 1000000000000000000
+        }
+      ]
+    },
+    {
+      "SequenceLevel": 2,
+      "AllorMajority": "ALL",
+      "NumberofApprover": 1,
+      "approvers": [
+        {
+          "PositionorEmployee": "Employee",
+          "PositionorEmployeeID": "6",
+          "AmountFrom": 1,
+          "AmountTo": 999999999999999
+        }
+      ]
+    }
+  ]
+}
+[2026-02-10T06:29:15.267Z] Found existing IDs to delete: []
+[2026-02-10T06:29:15.267Z] Processing sequence: {"SequenceLevel":1,"AllorMajority":"ALL","NumberofApprover":1,"approvers":[{"PositionorEmployee":"Position","PositionorEmployeeID":"2","AmountFrom":1,"AmountTo":1000000000000000000}]}
+[2026-02-10T06:29:15.275Z] Created matrix ID: 11
+[2026-02-10T06:29:15.276Z] Creating approvers: [{"LinkID":"11","PositionorEmployee":"Position","PositionorEmployeeID":"2","AmountFrom":1,"AmountTo":99999999999999.98}]
+[2026-02-10T06:29:15.283Z] Processing sequence: {"SequenceLevel":2,"AllorMajority":"ALL","NumberofApprover":1,"approvers":[{"PositionorEmployee":"Employee","PositionorEmployeeID":"6","AmountFrom":1,"AmountTo":999999999999999}]}
+[2026-02-10T06:29:15.287Z] Created matrix ID: 12
+[2026-02-10T06:29:15.287Z] Creating approvers: [{"LinkID":"12","PositionorEmployee":"Employee","PositionorEmployeeID":"6","AmountFrom":1,"AmountTo":99999999999999.98}]
+[2026-02-10T06:29:15.295Z] Transaction committed successfully

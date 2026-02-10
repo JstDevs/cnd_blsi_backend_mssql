@@ -1,6 +1,8 @@
 const { ApprovalMatrix, Approvers, documentType, sequelize } = require('../config/database');
 const getLatestApprovalMatrixInfo = require('../utils/getLatestApprovalMatrixInfo');
 const { literal } = require('sequelize');
+const fs = require('fs');
+const path = require('path');
 
 // exports.create = async (req, res) => {
 //   try {
@@ -221,10 +223,22 @@ exports.delete = async (req, res) => {
 
 exports.bulkUpdate = async (req, res) => {
   const t = await sequelize.transaction();
+  const logFile = path.join(__dirname, '../approval_debug.log');
+
+  const log = (msg) => {
+    fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
+  };
+
   try {
+    log("Starting bulkUpdate");
+    log(`Payload: ${JSON.stringify(req.body, null, 2)}`);
+
     console.log("[ApprovalMatrix] Bulk Update Payload:", JSON.stringify(req.body, null, 2));
     const { DocumentTypeID, sequences } = req.body;
     const userID = req.user?.id || 1; // Fallback to 1 if user is not defined
+
+    // DECIMAL(18,2) Max Value
+    const MAX_AMOUNT = 99999999999999.99;
 
     if (!DocumentTypeID) {
       throw new Error("DocumentTypeID is required");
@@ -242,6 +256,7 @@ exports.bulkUpdate = async (req, res) => {
     });
 
     const existingIds = existingMatrices.map(m => m.ID);
+    log(`Found existing IDs to delete: ${JSON.stringify(existingIds)}`);
 
     if (existingIds.length > 0) {
       // Step 2: Delete associated approvers
@@ -261,6 +276,8 @@ exports.bulkUpdate = async (req, res) => {
     const createdSequences = [];
 
     for (const seq of sequences) {
+      log(`Processing sequence: ${JSON.stringify(seq)}`);
+
       const matrix = await ApprovalMatrix.create({
         DocumentTypeID: parseInt(DocumentTypeID), // Ensure integer
         SequenceLevel: seq.SequenceLevel,
@@ -274,15 +291,28 @@ exports.bulkUpdate = async (req, res) => {
         AlteredDate: sequelize.fn('GETDATE')
       }, { transaction: t });
 
+      log(`Created matrix ID: ${matrix.ID}`);
+
       // Create associated approvers
       if (seq.approvers && seq.approvers.length > 0) {
-        const approverRecords = seq.approvers.map(a => ({
-          LinkID: matrix.ID,
-          PositionorEmployee: a.PositionorEmployee,
-          PositionorEmployeeID: a.PositionorEmployeeID,
-          AmountFrom: a.AmountFrom || 0,
-          AmountTo: a.AmountTo || 0,
-        }));
+        const approverRecords = seq.approvers.map(a => {
+          let amountFrom = a.AmountFrom || 0;
+          let amountTo = a.AmountTo || 0;
+
+          // Clamp values to prevent overflow
+          if (amountFrom > MAX_AMOUNT) amountFrom = MAX_AMOUNT;
+          if (amountTo > MAX_AMOUNT) amountTo = MAX_AMOUNT;
+
+          return {
+            LinkID: matrix.ID,
+            PositionorEmployee: a.PositionorEmployee,
+            PositionorEmployeeID: a.PositionorEmployeeID,
+            AmountFrom: amountFrom,
+            AmountTo: amountTo,
+          };
+        });
+
+        log(`Creating approvers: ${JSON.stringify(approverRecords)}`);
 
         await Approvers.bulkCreate(approverRecords, { transaction: t });
       }
@@ -291,6 +321,7 @@ exports.bulkUpdate = async (req, res) => {
     }
 
     await t.commit();
+    log("Transaction committed successfully");
 
     // Step 5: Return the full fresh list
     const result = await ApprovalMatrix.findAll({
@@ -313,6 +344,8 @@ exports.bulkUpdate = async (req, res) => {
   } catch (err) {
     if (t) await t.rollback();
     console.error("Bulk Update Error:", err);
+    log(`ERROR: ${err.message}`);
+    log(`STACK: ${err.stack}`);
     res.status(500).json({ error: err.message });
   }
 };

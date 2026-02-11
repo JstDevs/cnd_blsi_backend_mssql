@@ -68,20 +68,33 @@ async function validateApproval({ documentTypeID, approvalVersion, totalAmount, 
         }
 
         const nextSequenceInt = parseInt(nextRule.SequenceLevel);
-        console.log(`[validateApproval] Next Level Needed: ${nextSequenceInt}`);
 
-        // 4. Check authorization
-        const isAuthorized = nextRule.Approvers.some(appr => {
-            const type = appr.PositionorEmployee;
-            const targetID = parseInt(appr.PositionorEmployeeID);
+        // Fetch ALL rules for this sequence level (in case of split approvals)
+        const currentLevelRules = matrixRules.filter(r => parseInt(r.SequenceLevel) === nextSequenceInt);
 
-            console.log(`[validateApproval] Rule Seq ${nextSequenceInt}: Checking ${type} ID ${targetID} against User (Pos:${positionID}, Emp:${employeeID}, Roles:${userAccessIDs})`);
+        console.log(`[validateApproval] Next Level Needed: ${nextSequenceInt}, Rules Found: ${currentLevelRules.length}`);
 
-            if (type === 'Position') return targetID === positionID;
-            if (type === 'Employee') return targetID === employeeID;
-            if (type === 'Role') return userAccessIDs.includes(targetID);
-            return false;
-        });
+        // 4. Check authorization (against ANY of the rules for this level)
+        let isAuthorized = false;
+
+        for (const rule of currentLevelRules) {
+            const authorizedInRule = rule.Approvers.some(appr => {
+                const type = appr.PositionorEmployee;
+                const targetID = parseInt(appr.PositionorEmployeeID);
+
+                // console.log(`[validateApproval] Rule Seq ${nextSequenceInt} (RuleID ${rule.ID}): Checking ${type} ID ${targetID} against User`);
+
+                if (type === 'Position') return targetID === positionID;
+                if (type === 'Employee') return targetID === employeeID;
+                if (type === 'Role') return userAccessIDs.includes(targetID);
+                return false;
+            });
+
+            if (authorizedInRule) {
+                isAuthorized = true;
+                break;
+            }
+        }
 
         if (!isAuthorized) {
             console.log(`[validateApproval] DENIED: User not in authorized list for Seq ${nextSequenceInt}`);
@@ -113,8 +126,20 @@ async function validateApproval({ documentTypeID, approvalVersion, totalAmount, 
             }
         });
 
-        const totalApproversNeeded = nextRule.NumberofApprover || 1;
-        const ruleType = nextRule.AllorMajority;
+        // Calculate Total Needed for this Level
+        // If multiple rules exist for same level, we SUM their requirements (assuming split responsibility)
+        // Adjust this logic if the requirement is different (e.g. MAX)
+        let totalApproversNeeded = 0;
+        let ruleType = 'All'; // Default
+
+        if (currentLevelRules.length > 0) {
+            totalApproversNeeded = currentLevelRules.reduce((sum, r) => sum + (r.NumberofApprover || 1), 0);
+            ruleType = currentLevelRules[0].AllorMajority; // Take from first rule
+        } else {
+            totalApproversNeeded = nextRule.NumberofApprover || 1;
+            ruleType = nextRule.AllorMajority;
+        }
+
         const newApprovalCount = approvalsInCurrentLevel + 1;
 
         let isSequenceSatisfied = false;
@@ -124,9 +149,12 @@ async function validateApproval({ documentTypeID, approvalVersion, totalAmount, 
             isSequenceSatisfied = newApprovalCount >= totalApproversNeeded;
         }
 
+        console.log(`[validateApproval] Level ${nextSequenceInt}: Has ${newApprovalCount}/${totalApproversNeeded} approvals. Satisfied: ${isSequenceSatisfied}`);
+
         // 7. Finality
-        const remainingRules = matrixRules.filter(r => parseInt(r.SequenceLevel) > nextSequenceInt);
-        const isFinal = isSequenceSatisfied && remainingRules.length === 0;
+        // Check if there are any levels AFTER this one
+        const higherLevels = matrixRules.filter(r => parseInt(r.SequenceLevel) > nextSequenceInt);
+        const isFinal = isSequenceSatisfied && higherLevels.length === 0;
 
         return {
             canApprove: true,

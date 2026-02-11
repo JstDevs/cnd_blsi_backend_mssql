@@ -79,18 +79,27 @@ exports.saveTransaction = async (req, res) => {
     // ------------------ Create New Payor ------------------
     if (IsNew && !data.CustomerID && data.CustomerName) {
       try {
-        console.log('Creating New Payor (Marriage):', data.CustomerName);
-        const newCustomer = await Customer.create({
-          Name: data.CustomerName,
-          Active: true,
-          CreatedBy: req.user.id,
-          CreatedDate: db.sequelize.fn('GETDATE'),
-          ModifyBy: req.user.id,
-          ModifyDate: db.sequelize.fn('GETDATE')
-        }, { transaction: t });
-        data.CustomerID = newCustomer.ID;
+        console.log('Checking/Creating New Payor (Marriage):', data.CustomerName);
+        const existingCustomer = await Customer.findOne({
+          where: { Name: data.CustomerName },
+          transaction: t
+        });
+
+        if (existingCustomer) {
+          data.CustomerID = existingCustomer.ID;
+        } else {
+          const newCustomer = await Customer.create({
+            Name: data.CustomerName,
+            Active: true,
+            CreatedBy: req.user.id,
+            CreatedDate: db.sequelize.fn('GETDATE'),
+            ModifyBy: req.user.id,
+            ModifyDate: db.sequelize.fn('GETDATE')
+          }, { transaction: t });
+          data.CustomerID = newCustomer.ID;
+        }
       } catch (err) {
-        console.error('Error creating payor:', err);
+        console.error('Error handling payor:', err);
       }
     }
 
@@ -98,18 +107,27 @@ exports.saveTransaction = async (req, res) => {
     // ---------------- Create New Spouse if needed ----------------
     if (IsNew && !data.MarytoID && data.MarrytoName) {
       try {
-        console.log('Creating New Spouse:', data.MarrytoName);
-        const newSpouse = await Customer.create({
-          Name: data.MarrytoName,
-          Active: true,
-          CreatedBy: req.user.id,
-          CreatedDate: db.sequelize.fn('GETDATE'),
-          ModifyBy: req.user.id,
-          ModifyDate: db.sequelize.fn('GETDATE')
-        }, { transaction: t });
-        data.MarytoID = newSpouse.ID; // Update the ID variable you use for creating the record
+        console.log('Checking/Creating New Spouse:', data.MarrytoName);
+        const existingSpouse = await Customer.findOne({
+          where: { Name: data.MarrytoName },
+          transaction: t
+        });
+
+        if (existingSpouse) {
+          data.MarytoID = existingSpouse.ID;
+        } else {
+          const newSpouse = await Customer.create({
+            Name: data.MarrytoName,
+            Active: true,
+            CreatedBy: req.user.id,
+            CreatedDate: db.sequelize.fn('GETDATE'),
+            ModifyBy: req.user.id,
+            ModifyDate: db.sequelize.fn('GETDATE')
+          }, { transaction: t });
+          data.MarytoID = newSpouse.ID; // Update the ID variable you use for creating the record
+        }
       } catch (err) {
-        console.error('Error creating spouse:', err);
+        console.error('Error handling spouse:', err);
       }
     }
 

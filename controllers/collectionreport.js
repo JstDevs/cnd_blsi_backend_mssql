@@ -5,13 +5,51 @@ const fs = require('fs');
 const { Op, fn, col, literal } = require('sequelize');
 const db = require("../config/database");
 const { getAllWithAssociations } = require('../models/associatedDependency');
-const exportToExcel = async (data, filename) => {
+const exportToExcel = async (data, filename, columns) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Collection Report');
-  worksheet.columns = Object.keys(data[0] || {}).map(key => ({ header: key, key }));
-  worksheet.addRows(data);
-  worksheet.columns.forEach(col => col.width = col.header.length < 12 ? 12 : col.header.length);
-  const filePath = path.join(__dirname, `../public/exports/${filename}`);
+
+  worksheet.columns = columns;
+
+  // Map data to match keys and handle formatting
+  const rows = data.map(item => {
+    const row = { ...item };
+    // Common date formatting if keys exist
+    if (row.Date) row.Date = new Date(row.Date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (row.Date1) row.Date1 = new Date(row.Date1).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (row.Date2) row.Date2 = new Date(row.Date2).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (row.InvoiceDate) row.InvoiceDate = new Date(row.InvoiceDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (row.StartDate) row.StartDate = new Date(row.StartDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (row.EndDate) row.EndDate = new Date(row.EndDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    // Ensure numbers are numbers
+    if (row.SubTotal) row.SubTotal = Number(row.SubTotal);
+    if (row.Total) row.Total = Number(row.Total);
+    if (row.First) row.First = Number(row.First);
+    if (row.Second) row.Second = Number(row.Second);
+    if (row.Third) row.Third = Number(row.Third);
+
+    return row;
+  });
+
+  worksheet.addRows(rows);
+
+  // Apply currency formatting to numeric columns dynamically
+  worksheet.columns.forEach((col, idx) => {
+    const header = col.header.toLowerCase();
+    if (header.includes('amount') || header.includes('total') || header.includes('quarter') || header.includes('debit') || header.includes('credit') || header.includes('balance')) {
+      worksheet.getColumn(idx + 1).numFmt = '#,##0.00;[Red](#,##0.00)';
+    }
+  });
+
+  // Header styling
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+  const exportDir = path.join(__dirname, '../public/exports');
+  if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
+
+  const filePath = path.join(exportDir, filename);
   await workbook.xlsx.writeFile(filePath);
   return filePath;
 };
@@ -421,10 +459,35 @@ exports.exportExcelDaily = async (req, res) => {
       }
     );
 
+    // Robust way to handle both [rows, metadata] and direct rows from DB result
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    }
+
+    const columns = [
+      { header: 'Date', key: 'Date', width: 15 },
+      { header: 'Account No.', key: 'Account', width: 15 },
+      { header: 'Name', key: 'Name', width: 30 },
+      { header: 'Amount', key: 'SubTotal', width: 15 },
+      { header: 'Prepared By', key: 'FullName', width: 25 },
+    ];
+
     const filename = `Collection_Report_Daily_${Date.now()}.xlsx`;
-    const filePath = await exportToExcel(results, filename);
+    const filePath = await exportToExcel(rows, filename, columns);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-    res.download(filePath, err => { if (err) fs.unlinkSync(filePath); });
+    res.download(filePath, err => {
+      if (err) console.error('Download error:', err);
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (e) {
+        console.error('Error deleting temp file:', e);
+      }
+    });
   } catch (err) {
     console.log('Error exporting to Excel:', err);
     res.status(500).json({ error: err.message });
@@ -462,10 +525,36 @@ exports.exportExcelMonthly = async (req, res) => {
       }
     );
 
+    // Robust way to handle both [rows, metadata] and direct rows from DB result
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    }
+
+    const columns = [
+      { header: 'Month', key: 'Month', width: 15 },
+      { header: 'Year', key: 'Year', width: 10 },
+      { header: 'Chart of Accounts', key: 'ChartOfAccounts', width: 20 },
+      { header: 'Name', key: 'Name', width: 30 },
+      { header: 'Amount', key: 'SubTotal', width: 15 },
+      { header: 'Prepared By', key: 'FullName', width: 25 },
+    ];
+
     const filename = `Collection_Report_Monthly_${Date.now()}.xlsx`;
-    const filePath = await exportToExcel(results, filename);
+    const filePath = await exportToExcel(rows, filename, columns);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-    res.download(filePath, err => { if (err) fs.unlinkSync(filePath); });
+    res.download(filePath, err => {
+      if (err) console.error('Download error:', err);
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (e) {
+        console.error('Error deleting temp file:', e);
+      }
+    });
   } catch (err) {
     console.log('Error exporting to Excel:', err);
     res.status(500).json({ error: err.message });
@@ -504,10 +593,37 @@ exports.exportExcelQuarterly = async (req, res) => {
       }
     );
 
+    // Robust way to handle both [rows, metadata] and direct rows from DB result
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    }
+
+    const columns = [
+      { header: 'Fund', key: 'FundName', width: 20 },
+      { header: 'Account', key: 'ChartOfAccounts', width: 20 },
+      { header: 'Name', key: 'Name', width: 30 },
+      { header: '1st Quarter', key: 'First', width: 15 },
+      { header: '2nd Quarter', key: 'Second', width: 15 },
+      { header: '3rd Quarter', key: 'Third', width: 15 },
+      { header: 'Total', key: 'Total', width: 15 },
+    ];
+
     const filename = `Collection_Report_Quarterly_${Date.now()}.xlsx`;
-    const filePath = await exportToExcel(results, filename);
+    const filePath = await exportToExcel(rows, filename, columns);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-    res.download(filePath, err => { if (err) fs.unlinkSync(filePath); });
+    res.download(filePath, err => {
+      if (err) console.error('Download error:', err);
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (e) {
+        console.error('Error deleting temp file:', e);
+      }
+    });
   } catch (err) {
     console.log('Error exporting to Excel:', err);
     res.status(500).json({ error: err.message });
@@ -547,10 +663,35 @@ exports.exportExcelFlexible = async (req, res) => {
       }
     );
 
+    // Robust way to handle both [rows, metadata] and direct rows from DB result
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    }
+
+    const columns = [
+      { header: 'Invoice Date', key: 'InvoiceDate', width: 15 },
+      { header: 'Invoice No.', key: 'InvoiceNumber', width: 15 },
+      { header: 'Customer', key: 'CustomerName', width: 25 },
+      { header: 'Note', key: 'Note', width: 35 },
+      { header: 'Total', key: 'Total', width: 15 },
+    ];
+
     const filename = `Collection_Report_Flexible_${Date.now()}.xlsx`;
-    const filePath = await exportToExcel(results, filename);
+    const filePath = await exportToExcel(rows, filename, columns);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-    res.download(filePath, err => { if (err) fs.unlinkSync(filePath); });
+    res.download(filePath, err => {
+      if (err) console.error('Download error:', err);
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (e) {
+        console.error('Error deleting temp file:', e);
+      }
+    });
   } catch (err) {
     console.log('Error exporting to Excel:', err);
     res.status(500).json({ error: err.message });

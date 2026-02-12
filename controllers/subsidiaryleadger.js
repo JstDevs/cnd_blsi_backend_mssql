@@ -5,10 +5,51 @@ const ExcelJS = require('exceljs');
 const exportToExcel = async (data, filename) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Subsidiary Ledger');
-  worksheet.columns = Object.keys(data[0] || {}).map(key => ({ header: key, key }));
-  worksheet.addRows(data);
-  worksheet.columns.forEach(col => col.width = col.header.length < 12 ? 12 : col.header.length);
-  const filePath = path.join(__dirname, `../public/exports/${filename}`);
+
+  // Define columns based on SubsidiaryLedger.jsx
+  worksheet.columns = [
+    { header: 'ID', key: 'id', width: 10 },
+    { header: 'Fund', key: 'fund', width: 25 },
+    { header: 'Account Name', key: 'account_name', width: 30 },
+    { header: 'Account Code', key: 'account_code', width: 20 },
+    { header: 'Date', key: 'date', width: 15 },
+    { header: 'Ledger Item', key: 'ledger_item', width: 35 },
+    { header: 'Debit', key: 'debit', width: 15 },
+    { header: 'Credit', key: 'credit', width: 15 },
+    { header: 'Balance', key: 'balance', width: 15 },
+    { header: 'Municipality', key: 'municipality', width: 25 },
+  ];
+
+  // Map data to match keys and handle formatting
+  const rows = data.map(item => ({
+    ...item,
+    id: item.id || '',
+    fund: item.fund || item.Fund || '',
+    account_name: item.account_name || item.AccountName || '',
+    account_code: item.account_code || item.AccountCode || '',
+    date: item.date || item.Date ? new Date(item.date || item.Date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+    ledger_item: item.ledger_item || item.LedgerItem || '',
+    debit: Number(item.debit || item.Debit || 0),
+    credit: Number(item.credit || item.Credit || 0),
+    balance: Number(item.balance || item.Balance || 0),
+    municipality: item.municipality || item.Municipality || '',
+  }));
+
+  worksheet.addRows(rows);
+
+  // Format numeric columns
+  ['G', 'H', 'I'].forEach(colKey => {
+    worksheet.getColumn(colKey).numFmt = '#,##0.00;[Red](#,##0.00)';
+  });
+
+  // Header styling
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+  const exportDir = path.join(__dirname, '../public/exports');
+  if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
+
+  const filePath = path.join(exportDir, filename);
   await workbook.xlsx.writeFile(filePath);
   return filePath;
 };
@@ -143,7 +184,11 @@ exports.exportExcel = async (req, res) => {
     res.download(filePath, err => {
       if (err) {
         console.error('Download error:', err);
+      }
+      try {
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (e) {
+        console.error('Error deleting temp file:', e);
       }
     });
   } catch (err) {

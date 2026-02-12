@@ -1,13 +1,53 @@
 const { sequelize } = require('../config/database');
 const path = require('path');
+const fs = require('fs');
 const ExcelJS = require('exceljs');
 const exportToExcel = async (data, filename) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('General Ledger');
-  worksheet.columns = Object.keys(data[0] || {}).map(key => ({ header: key, key }));
-  worksheet.addRows(data);
-  worksheet.columns.forEach(col => col.width = col.header.length < 12 ? 12 : col.header.length);
-  const filePath = path.join(__dirname, `../public/exports/${filename}`);
+
+  // Define columns based on GeneralLedgerPage.jsx columns
+  worksheet.columns = [
+    { header: 'Invoice Number', key: 'invoice_number', width: 20 },
+    { header: 'Fund', key: 'fund', width: 25 },
+    { header: 'Account Name', key: 'account_name', width: 30 },
+    { header: 'Account Code', key: 'account_code', width: 20 },
+    { header: 'Date', key: 'date', width: 15 },
+    { header: 'Debit', key: 'debit', width: 15 },
+    { header: 'Credit', key: 'credit', width: 15 },
+    { header: 'Balance', key: 'balance', width: 15 },
+  ];
+
+  // Map data to match keys and handle formatting
+  const rows = data.map(item => ({
+    ...item,
+    invoice_number: item.invoice_number || item['Invoice Number'] || '',
+    fund: item.fund || item['Fund Name'] || '',
+    account_name: item.account_name || item['Account Name'] || '',
+    account_code: item.account_code || item['Account Code'] || '',
+    date: item.date || item['Invoice Date'] ? new Date(item.date || item['Invoice Date']).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+    debit: Number(item.debit || item.Debit || 0),
+    credit: Number(item.credit || item.Credit || 0),
+    balance: Number(item.balance || item.Balance || 0),
+  }));
+
+  worksheet.addRows(rows);
+
+  // Format numeric columns as currency-ish
+  ['F', 'G', 'H'].forEach(colKey => {
+    worksheet.getColumn(colKey).numFmt = '#,##0.00;[Red](#,##0.00)';
+  });
+
+  // Header styling
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+  const exportDir = path.join(__dirname, '../public/exports');
+  if (!fs.existsSync(exportDir)) {
+    fs.mkdirSync(exportDir, { recursive: true });
+  }
+
+  const filePath = path.join(exportDir, filename);
   await workbook.xlsx.writeFile(filePath);
   return filePath;
 };
@@ -158,10 +198,34 @@ exports.exportExcel = async (req, res) => {
       }
     );
 
+    // Robust way to handle both [rows, metadata] and direct rows from DB result
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    }
+
+    if (rows.length === 0) {
+      console.log('No data found for export');
+    }
+
     const filename = `General_Ledger_${Date.now()}.xlsx`;
-    const filePath = await exportToExcel(results, filename);
+    const filePath = await exportToExcel(rows, filename);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-    res.download(filePath, err => { if (err) fs.unlinkSync(filePath); });
+    res.download(filePath, err => {
+      if (err) {
+        console.error('Download error:', err);
+      }
+      // Attempt to delete the file after download
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (e) {
+        console.error('Error deleting temp file:', e);
+      }
+    });
   } catch (err) {
     console.log('Error exporting to Excel:', err);
     res.status(500).json({ error: err.message });
@@ -237,7 +301,7 @@ exports.exportExcel = async (req, res) => {
 //   const fundID = fund[0]?.ID || '%';
 
 //  const results = await sequelize.query(`
-//       SELECT 
+//       SELECT
 //         tbl.ID,
 //         tbl.APAR,
 //         tbl.Fund,

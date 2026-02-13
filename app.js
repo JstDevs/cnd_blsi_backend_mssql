@@ -182,7 +182,9 @@ const dataSourceRoutes = require('./routes/dataSource');
 const watermarksRoutes = require('./routes/watermarks');
 const signatoriesRoutes = require('./routes/signatories');
 const logoImagesRoutes = require('./routes/logoimages');
+const financialPositionReport = require("./routes/financialPositionReport");
 const { profile } = require('console');
+
 app.use('/auth', authRoutes);
 app.use('/accountcategory', accountcategoryRoutes);
 app.use('/accountsubtype', accountsubtypeRoutes);
@@ -303,6 +305,8 @@ app.use("/generalledger", generalledger)
 app.use("/subsidiaryleadger", subsidiaryleadger)
 app.use("/trialBalanceReport", trialBalanceReport)
 app.use("/financialStatementsReports", financialStatementsReports)
+app.use("/financialPositionReport", financialPositionReport)
+
 app.use("/statementOfComparison", statementOfComparison);
 app.use("/statementOfAppropriations", statementOfAppropriations);
 app.use("/postClosingReport", postClosingReport);

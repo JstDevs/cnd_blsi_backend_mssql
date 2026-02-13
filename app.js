@@ -183,7 +183,9 @@ const watermarksRoutes = require('./routes/watermarks');
 const signatoriesRoutes = require('./routes/signatories');
 const logoImagesRoutes = require('./routes/logoimages');
 const financialPositionReport = require("./routes/financialPositionReport");
+const financialPerformanceReport = require("./routes/financialPerformanceReport");
 const { profile } = require('console');
+
 
 app.use('/auth', authRoutes);
 app.use('/accountcategory', accountcategoryRoutes);
@@ -306,6 +308,8 @@ app.use("/subsidiaryleadger", subsidiaryleadger)
 app.use("/trialBalanceReport", trialBalanceReport)
 app.use("/financialStatementsReports", financialStatementsReports)
 app.use("/financialPositionReport", financialPositionReport)
+app.use("/financialPerformanceReport", financialPerformanceReport)
+
 
 app.use("/statementOfComparison", statementOfComparison);
 app.use("/statementOfAppropriations", statementOfAppropriations);

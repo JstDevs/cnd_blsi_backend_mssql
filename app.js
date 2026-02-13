@@ -168,6 +168,7 @@ const trialBalanceReport = require("./routes/trialBalanceReport")
 const financialStatementsReports = require("./routes/financialStatementsReports")
 const statementOfComparison = require("./routes/statementOfComparison")
 const statementOfAppropriations = require("./routes/statementOfAppropriations");
+const postClosingReport = require("./routes/postClosingReport");
 const budgetReport = require("./routes/budgetReport");
 const budgetDetails = require("./routes/budgetDetails");
 const budgetAllotment = require("./routes/budgetAllotment");
@@ -304,6 +305,7 @@ app.use("/trialBalanceReport", trialBalanceReport)
 app.use("/financialStatementsReports", financialStatementsReports)
 app.use("/statementOfComparison", statementOfComparison);
 app.use("/statementOfAppropriations", statementOfAppropriations);
+app.use("/postClosingReport", postClosingReport);
 app.use("/budgetReport", budgetReport);
 app.use("/budgetDetails", budgetDetails);
 app.use("/budgetAllotment", budgetAllotment);

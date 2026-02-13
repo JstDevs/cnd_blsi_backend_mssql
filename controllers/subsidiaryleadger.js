@@ -130,7 +130,7 @@ exports.view = async (req, res) => {
     console.log('Subsidiary Ledger View Request:', req.body);
 
     const results = await sequelize.query(
-      'CALL SP_SubsidiaryLedger(:accountCode, :fundID, :cutoff)',
+      'EXEC SP_SubsidiaryLedger :accountCode, :fundID, :cutoff',
       {
         replacements: {
           accountCode: ChartofAccountsID ?? '%',
@@ -165,7 +165,7 @@ exports.exportExcel = async (req, res) => {
     console.log('Subsidiary Ledger Export Request:', req.body);
 
     const results = await sequelize.query(
-      'CALL SP_SubsidiaryLedger(:accountCode, :fundID, :cutoff)',
+      'EXEC SP_SubsidiaryLedger :accountCode, :fundID, :cutoff',
       {
         replacements: {
           accountCode: ChartofAccountsID ?? '%',

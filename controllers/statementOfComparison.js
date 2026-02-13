@@ -108,7 +108,7 @@ exports.view = async (req, res) => {
     } = req.body;
 
     const results = await sequelize.query(
-      'CALL SP_SCBAA(:fiscalYear)',
+      'EXEC SP_SCBAA :fiscalYear',
       {
         replacements: { fiscalYear: fiscalYearID },
       }
@@ -128,7 +128,7 @@ exports.exportExcel = async (req, res) => {
     } = req.body;
 
     const results = await sequelize.query(
-      'CALL SP_SCBAA(:fiscalYear)',
+      'EXEC SP_SCBAA :fiscalYear',
       {
         replacements: { fiscalYear: fiscalYearID },
       }

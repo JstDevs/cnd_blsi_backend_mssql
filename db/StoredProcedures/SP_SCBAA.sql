@@ -1,9 +1,16 @@
--- DELIMITER $$
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
-DROP PROCEDURE IF EXISTS SP_SCBAA;
-CREATE PROCEDURE SP_SCBAA (
-  IN fiscalYear VARCHAR(50)
+IF OBJECT_ID('[dbo].[SP_SCBAA]', 'P') IS NOT NULL
+DROP PROCEDURE [dbo].[SP_SCBAA]
+GO
+
+CREATE PROCEDURE [dbo].[SP_SCBAA] (
+  @fiscalYear VARCHAR(50)
 )
+AS
 BEGIN
   SELECT
     act.Name AS Type,
@@ -11,7 +18,6 @@ BEGIN
     acs.Name AS Subtype,
     acc.Name AS Category,
     coa.Name AS ChartOfAccounts,
-    -- REPLACE(coa.AccountCode, '-', '') AS AccountCode,
     coa.AccountCode AS AccountCode,
     
     SUM(bud.Appropriation) AS Original,
@@ -22,19 +28,16 @@ BEGIN
 
     -- Last day of the month for fsy.MonthEnd
     CASE 
-      WHEN fsy.MonthEnd IN ("January", "March", "May", "July", "August", "October", "December")
-      THEN CONCAT(fsy.MonthEnd, " 31, ", fsy.Year)
-      WHEN fsy.MonthEnd IN ("April", "June", "September", "November")
-      THEN CONCAT(fsy.MonthEnd, " 30, ", fsy.Year)
-      WHEN fsy.Year % 4
-      THEN CONCAT(fsy.MonthEnd, " 29, ", fsy.Year)
-      WHEN NOT fsy.Year % 4
-      THEN CONCAT(fsy.MonthEnd, " 28, ", fsy.Year)
-      ELSE "Error Period"
+      WHEN fsy.MonthEnd IN ('January', 'March', 'May', 'July', 'August', 'October', 'December')
+      THEN fsy.MonthEnd + ' 31, ' + fsy.Year
+      WHEN fsy.MonthEnd IN ('April', 'June', 'September', 'November')
+      THEN fsy.MonthEnd + ' 30, ' + fsy.Year
+      -- Simplistic leap year check from original, maintained for parity
+      WHEN CAST(fsy.Year AS INT) % 4 <> 0
+      THEN fsy.MonthEnd + ' 28, ' + fsy.Year
+      ELSE fsy.MonthEnd + ' 29, ' + fsy.Year
     END AS Period,
-    -- fsy.MonthEnd AS Period,
 
-    -- Redundant group totals (used again as _Sum)
     SUM(bud.Appropriation) AS Original_Sum,
     SUM(bud.TotalAmount) AS Final_Sum,
     SUM(bud.Appropriation) - SUM(bud.TotalAmount) AS Difference_Sum,
@@ -44,7 +47,7 @@ BEGIN
     lmu.Name AS Municipality,
     lpr.Name AS Province,
 
-    fiscalYear AS Extra
+    @fiscalYear AS Extra
 
   FROM budget AS bud
     INNER JOIN chartofaccounts  AS coa ON coa.ID = bud.ChartOfAccountsID
@@ -56,7 +59,7 @@ BEGIN
     INNER JOIN municipality     AS lmu ON lmu.ID = lgu.MunicipalityID
     INNER JOIN province         AS lpr ON lpr.ID = lgu.ProvinceID
 
-  WHERE bud.FiscalYearID = fiscalYear
+  WHERE bud.FiscalYearID = @fiscalYear
 
   GROUP BY 
     act.Name,
@@ -65,10 +68,16 @@ BEGIN
     acc.Name,
     coa.Name,
     coa.AccountCode,
-    Period,
+    CASE 
+      WHEN fsy.MonthEnd IN ('January', 'March', 'May', 'July', 'August', 'October', 'December')
+      THEN fsy.MonthEnd + ' 31, ' + fsy.Year
+      WHEN fsy.MonthEnd IN ('April', 'June', 'September', 'November')
+      THEN fsy.MonthEnd + ' 30, ' + fsy.Year
+      WHEN CAST(fsy.Year AS INT) % 4 <> 0
+      THEN fsy.MonthEnd + ' 28, ' + fsy.Year
+      ELSE fsy.MonthEnd + ' 29, ' + fsy.Year
+    END,
     lmu.Name,
     lpr.Name;
-END 
--- $$
-
--- DELIMITER ;
+END
+GO

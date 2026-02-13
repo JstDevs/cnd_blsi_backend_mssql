@@ -145,10 +145,16 @@ exports.save = async (req, res) => {
             const encumbrance = parseFloat(budget.Encumbrance || 0);
             const charges = parseFloat(budget.Charges || 0);
 
+            // Validation: Ensure Allotment (Released) does not exceed Total Appropriation
+            const newTotalBudget = (appropriation + supplemental + transfer);
+            if (newReleased > newTotalBudget) {
+              throw new Error(`The allotment amount (${amount}) exceeds the available appropriation balance of (${newTotalBudget - currentReleased}).`);
+            }
+
             // Interpretation A (User Schema): 
             // Allotment Balance = Allotment (Released) - Charges
             // Appropriation Balance = (Appropriation + Supplemental + Transfer) - Allotment (Released)
-            const newTotalBudget = (appropriation + supplemental + transfer);
+            newTotalBudget = (appropriation + supplemental + transfer);
             const newAllotmentBalance = newReleased - charges;
             const newAppropriationBalance = newTotalBudget - newReleased;
 
@@ -491,10 +497,15 @@ exports.approveTransaction = async (req, res) => {
           const transfer = parseFloat(budget.Transfer || 0);
           const charges = parseFloat(budget.Charges || 0);
 
+          // Validation: Ensure Allotment (Released) does not exceed Total Appropriation
+          const newTotalBudget = appropriation + supplemental + transfer;
+          if (newReleased > newTotalBudget) {
+            throw new Error(`Cannot approve. The total released allotment (${newReleased}) would exceed the total appropriation balance (${newTotalBudget}).`);
+          }
+
           // Correct formulas:
           // AppropriationBalance = (Appropriation + Supplemental + Transfer) - Released
           // AllotmentBalance = Released - Charges
-          const newTotalBudget = appropriation + supplemental + transfer;
           const newAllotmentBalance = newReleased - charges;
           const newAppropriationBalance = newTotalBudget - newReleased;
 

@@ -55,59 +55,64 @@ const exportToExcel = async (data, filename) => {
 
 const mockData = [
   {
-    "AccountCode": "1010101",
-    "AccountName": "Cash in Bank",
-    "Debit": 150000.00,
-    "Credit": 50000.00,
-    "EndDate": "2025-07-05",
+    "AccountCode": "10101010",
+    "AccountName": "Cash - Local Treasury",
+    "Debit": 2328772.73,
+    "Credit": 9012.00,
+    "EndDate": "2025-05-30",
     "Funds": "General Fund",
-    "FullName": "Maria C. Santos",
-    "Position": "Municipal Treasurer",
-    "Municipality": "DUENAS"
+    "FullName": "Cedric A. Entac",
+    "Municipality": "LUCENA"
   },
   {
-    "AccountCode": "1010201",
+    "AccountCode": "10101020",
+    "AccountName": "Due from Local Government Units",
+    "Debit": 0.00,
+    "Credit": 51228.78,
+    "EndDate": "2025-05-30",
+    "Funds": "General Fund",
+    "FullName": "Cedric A. Entac",
+    "Municipality": "LUCENA"
+  },
+  {
+    "AccountCode": "10101020",
     "AccountName": "Petty Cash",
-    "Debit": 20000.00,
-    "Credit": 5000.00,
-    "EndDate": "2025-07-05",
+    "Debit": 66660.00,
+    "Credit": 349572.00,
+    "EndDate": "2025-05-30",
     "Funds": "General Fund",
-    "FullName": "Maria C. Santos",
-    "Position": "Municipal Treasurer",
-    "Municipality": "DUENAS"
+    "FullName": "Cedric A. Entac",
+    "Municipality": "LUCENA"
   },
   {
-    "AccountCode": "2010101",
-    "AccountName": "Accounts Payable",
+    "AccountCode": "10102010",
+    "AccountName": "Cash in Bank - Local Currency, Current Account",
     "Debit": 0.00,
-    "Credit": 100000.00,
-    "EndDate": "2025-07-05",
-    "Funds": "All Funds",
-    "FullName": "Maria C. Santos",
-    "Position": "Municipal Treasurer",
-    "Municipality": "DUENAS"
+    "Credit": 18480.00,
+    "EndDate": "2025-05-30",
+    "Funds": "General Fund",
+    "FullName": "Cedric A. Entac",
+    "Municipality": "LUCENA"
   },
   {
-    "AccountCode": "3010101",
-    "AccountName": "Government Equity",
-    "Debit": 0.00,
-    "Credit": 150000.00,
-    "EndDate": "2025-07-05",
-    "Funds": "All Funds",
-    "FullName": "Maria C. Santos",
-    "Position": "Municipal Treasurer",
-    "Municipality": "DUENAS"
+    "AccountCode": "10205990",
+    "AccountName": "Other Investments",
+    "Debit": 3040000.00,
+    "Credit": 2678571.42,
+    "EndDate": "2025-05-30",
+    "Funds": "General Fund",
+    "FullName": "Cedric A. Entac",
+    "Municipality": "LUCENA"
   },
   {
-    "AccountCode": "4010101",
-    "AccountName": "Income from Grants",
-    "Debit": 0.00,
-    "Credit": 75000.00,
-    "EndDate": "2025-07-05",
-    "Funds": "Trust Fund",
-    "FullName": "Maria C. Santos",
-    "Position": "Municipal Treasurer",
-    "Municipality": "DUENAS"
+    "AccountCode": "50101010",
+    "AccountName": "Salaries and Wages - Regular",
+    "Debit": 100000.00,
+    "Credit": 118110.00,
+    "EndDate": "2025-05-30",
+    "Funds": "General Fund",
+    "FullName": "Cedric A. Entac",
+    "Municipality": "LUCENA"
   }
 ];
 

@@ -52,11 +52,11 @@ exports.view = async (req, res) => {
         } catch (spError) {
             console.warn('SP_FinancialPerformance failed or missing, returning mock data:', spError.message);
             const mockResults = [
-                { AccountCode: '40101010', AccountName: 'Tax Revenue - Individual', Amount: 5000000.00 },
-                { AccountCode: '40102010', AccountName: 'Tax Revenue - Corporate', Amount: 3000000.00 },
-                { AccountCode: '50101010', AccountName: 'Salaries and Wages - Regular', Amount: 4000000.00 },
-                { AccountCode: '50201010', AccountName: 'Traveling Expenses - Local', Amount: 500000.00 },
-                { AccountCode: '50202010', AccountName: 'Training Expenses', Amount: 300000.00 },
+                { AccountCode: '40101010', AccountName: 'Tax Revenue', Amount: 10000428394.00, Category: 'Business and Service Income', Municipality: 'San Dionisio' },
+                { AccountCode: '50101010', AccountName: 'Salaries', Amount: 228200.00, Category: 'Personal Services' },
+                { AccountCode: '50201010', AccountName: 'Travel', Amount: 113510.00, Category: 'Maintenance And Other Operating Expenses' },
+                { AccountCode: '50401010', AccountName: 'Subsidy From', Amount: 0.00, Category: 'Transfers, Assistance and Subsidy from' },
+                { AccountCode: '50501010', AccountName: 'Subsidy To', Amount: 0.00, Category: 'Transfers, Assistance and Subsidies to' },
             ];
             return res.json(mockResults);
         }

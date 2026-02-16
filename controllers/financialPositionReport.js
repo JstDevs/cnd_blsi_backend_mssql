@@ -56,12 +56,12 @@ exports.view = async (req, res) => {
             console.warn('SP_FinancialPosition failed or missing, returning mock data:', spError.message);
             // Return mock data for now since wala pa yung SP
             const mockResults = [
-                { AccountCode: '10101010', AccountName: 'Cash and Cash Equivalents', CurrentYearBalance: 1250000.50, NonCurrentYearBalance: 1100000.00 },
-                { AccountCode: '10201010', AccountName: 'Investments', CurrentYearBalance: 500000.00, NonCurrentYearBalance: 500000.00 },
-                { AccountCode: '10301010', AccountName: 'Receivables', CurrentYearBalance: 250000.00, NonCurrentYearBalance: 300000.00 },
-                { AccountCode: '20101010', AccountName: 'Accounts Payable', CurrentYearBalance: 450000.00, NonCurrentYearBalance: 400000.00 },
-                { AccountCode: '20201010', AccountName: 'Other Liabilities', CurrentYearBalance: 150000.00, NonCurrentYearBalance: 200000.00 },
-                { AccountCode: '30101010', AccountName: 'Government Equity', CurrentYearBalance: 1400000.50, NonCurrentYearBalance: 1300000.00 },
+                { AccountCode: '10101010', AccountName: 'Cash', CurrentYearBalance: 20000.00, Category: 'Current Assets', Municipality: 'San Dionisio' },
+                { AccountCode: '10201010', AccountName: 'Intangible Assets', CurrentYearBalance: 123464.00, Category: 'Current Assets' },
+                { AccountCode: '10301010', AccountName: 'Inventories', CurrentYearBalance: 1220.00, Category: 'Current Assets' },
+                { AccountCode: '20101010', AccountName: 'Financial Liabilities', CurrentYearBalance: 13783473590.00, Category: 'Current Liabilities' },
+                { AccountCode: '20201010', AccountName: 'Inter-Agency Payables', CurrentYearBalance: 23804818576.00, Category: 'Current Liabilities' },
+                { AccountCode: '30101010', AccountName: 'Government Equity', CurrentYearBalance: -24048766834.00, Category: '' },
             ];
             return res.json(mockResults);
         }

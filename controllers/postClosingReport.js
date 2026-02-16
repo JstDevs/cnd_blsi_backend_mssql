@@ -57,9 +57,10 @@ exports.view = async (req, res) => {
         // For now, return mock data or basic query since wala pa yung SP
         // Mock data below ___
         const results = [
-            { AccountCode: '10101010', AccountName: 'Cash in Bank - Mock', Debit: 1000000, Credit: 0 },
-            { AccountCode: '20101010', AccountName: 'Accounts Payable - Mock', Debit: 0, Credit: 500000 },
-            { AccountCode: '30101010', AccountName: 'Government Equity - Mock', Debit: 0, Credit: 500000 },
+            { AccountCode: '10101010', AccountName: 'Cash in Local Treasury', Debit: 1500000.00, Credit: 0, Municipality: 'San Dionisio', Province: 'Iloilo' },
+            { AccountCode: '10102010', AccountName: 'Cash in Bank - Local Currency', Debit: 5250300.50, Credit: 0 },
+            { AccountCode: '20101010', AccountName: 'Accounts Payable', Debit: 0, Credit: 1250300.50 },
+            { AccountCode: '30101010', AccountName: 'Government Equity', Debit: 0, Credit: 5500000.00 },
         ];
 
         return res.json(results);

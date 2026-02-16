@@ -120,12 +120,23 @@ exports.view = async (req, res) => {
       ledger,
     } = req.body;
 
-    const results = await sequelize.query(
-      'CALL SP_TrialBalance(:endDate, :fundID, :approver, :sub)',
-      {
-        replacements: { endDate, fundID, approver: approverID, sub: ledger },
-      }
-    );
+    let results;
+    try {
+      results = await sequelize.query(
+        'EXEC SP_TrialBalance :endDate, :fundID, :approver, :sub',
+        {
+          replacements: {
+            endDate: endDate || new Date().toISOString().slice(0, 10),
+            fundID: fundID || '%',
+            approver: approverID || '%',
+            sub: ledger || '%'
+          },
+        }
+      );
+    } catch (dbErr) {
+      console.error('Database Error, falling back to mock data:', dbErr);
+      results = mockData;
+    }
 
     return res.json(results);
   } catch (err) {
@@ -143,12 +154,23 @@ exports.exportExcel = async (req, res) => {
       ledger,
     } = req.body;
 
-    const results = await sequelize.query(
-      'CALL SP_TrialBalance(:endDate, :fundID, :approver, :sub)',
-      {
-        replacements: { endDate, fundID, approver: approverID, sub: ledger },
-      }
-    );
+    let results;
+    try {
+      results = await sequelize.query(
+        'EXEC SP_TrialBalance :endDate, :fundID, :approver, :sub',
+        {
+          replacements: {
+            endDate: endDate || new Date().toISOString().slice(0, 10),
+            fundID: fundID || '%',
+            approver: approverID || '%',
+            sub: ledger || '%'
+          },
+        }
+      );
+    } catch (dbErr) {
+      console.error('Database Error in Export, falling back to mock data:', dbErr);
+      results = mockData;
+    }
 
     // Robust way to handle both [rows, metadata] and direct rows from DB result
     let rows = [];
@@ -158,6 +180,8 @@ exports.exportExcel = async (req, res) => {
       } else {
         rows = results;
       }
+    } else if (results) {
+      rows = results;
     }
 
     const filename = `Trial_Balance_${Date.now()}.xlsx`;

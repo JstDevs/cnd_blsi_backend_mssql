@@ -143,7 +143,21 @@ exports.view = async (req, res) => {
     // Handle nested results array from CALL if necessary
     const finalData = (Array.isArray(results) && Array.isArray(results[0])) ? results[0] : results;
 
-    return res.json(finalData);
+    // Transform field names to match frontend expectations
+    const transformedData = finalData.map(row => ({
+      id: row.ID,
+      fund: row.Fund || row['Fund Name'],
+      account_name: row['Account Name Display'] || row['Account Name'],
+      account_code: row['Account Code Display'] || row['Account Code'],
+      date: row['Invoice Date'],
+      ledger_item: row['Ledger Item'],
+      debit: row.Debit,
+      credit: row.Credit,
+      balance: row.Balance,
+      municipality: row.Municipality
+    }));
+
+    return res.json(transformedData);
   } catch (err) {
     console.error('Subsidiary Ledger Error:', err);
     res.status(500).json({
@@ -178,8 +192,22 @@ exports.exportExcel = async (req, res) => {
     // Handle nested results array from CALL if necessary
     const finalData = (Array.isArray(results) && Array.isArray(results[0])) ? results[0] : results;
 
+    // Transform field names to match frontend expectations
+    const transformedData = finalData.map(row => ({
+      id: row.ID,
+      fund: row.Fund || row['Fund Name'],
+      account_name: row['Account Name Display'] || row['Account Name'],
+      account_code: row['Account Code Display'] || row['Account Code'],
+      date: row['Invoice Date'],
+      ledger_item: row['Ledger Item'],
+      debit: row.Debit,
+      credit: row.Credit,
+      balance: row.Balance,
+      municipality: row.Municipality
+    }));
+
     const filename = `Subsidiary_Ledger_${Date.now()}.xlsx`;
-    const filePath = await exportToExcel(finalData, filename);
+    const filePath = await exportToExcel(transformedData, filename);
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
     res.download(filePath, err => {
       if (err) {

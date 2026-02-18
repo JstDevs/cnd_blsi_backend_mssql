@@ -312,8 +312,8 @@ app.use("/trialBalanceReport", trialBalanceReport)
 app.use("/financialStatementsReports", financialStatementsReports)
 app.use("/financialPositionReport", financialPositionReport)
 app.use("/financialPerformanceReport", financialPerformanceReport)
+app.use("/changeInEquityReport", changeInEquityReport)
 app.use("/cashFlowReport", cashFlowReport)
-app.use("/changeInEquityReport", changeInEquityReport);
 
 
 

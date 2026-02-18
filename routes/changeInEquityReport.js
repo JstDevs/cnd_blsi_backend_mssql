@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/changeInEquityReport');
-const auth = require('../middleware/auth');
+const requireAuth = require('../middleware/requireAuth');
 
-router.post('/view', auth, controller.view);
-router.post('/exportExcel', auth, controller.exportExcel);
+router.post('/view', requireAuth, controller.view);
+router.post('/exportExcel', requireAuth, controller.exportExcel);
 
 module.exports = router;

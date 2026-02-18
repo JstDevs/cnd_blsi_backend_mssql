@@ -185,6 +185,7 @@ const logoImagesRoutes = require('./routes/logoimages');
 const financialPositionReport = require("./routes/financialPositionReport");
 const financialPerformanceReport = require("./routes/financialPerformanceReport");
 const cashFlowReport = require("./routes/cashFlowReport");
+const changeInEquityReport = require("./routes/changeInEquityReport");
 const { profile } = require('console');
 
 
@@ -312,6 +313,7 @@ app.use("/financialStatementsReports", financialStatementsReports)
 app.use("/financialPositionReport", financialPositionReport)
 app.use("/financialPerformanceReport", financialPerformanceReport)
 app.use("/cashFlowReport", cashFlowReport)
+app.use("/changeInEquityReport", changeInEquityReport);
 
 
 

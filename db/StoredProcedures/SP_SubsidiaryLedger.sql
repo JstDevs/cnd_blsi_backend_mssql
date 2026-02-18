@@ -17,8 +17,10 @@ BEGIN
     SELECT 
         gle.ID AS id,
         fnd.Name AS fund,
-        gle.AccountName AS account_name,
-        gle.AccountCode AS account_code,
+        -- coa.Name AS account_name,
+        -- coa.AccountCode AS account_code,
+        -- coa.SL AS sl,
+        -- coa.NormalBalance AS normal_balance,
         CAST(gle.CreatedDate AS DATE) AS date,
         gle.LedgerItem AS ledger_item,
         CASE
@@ -33,6 +35,7 @@ BEGIN
         lmu.Name AS municipality
     FROM generalledger AS gle
     INNER JOIN funds AS fnd ON fnd.ID = gle.FundID
+    -- INNER JOIN chartofaccounts AS coa ON coa.AccountCode = gle.AccountCode
     LEFT JOIN lgu AS lgu ON lgu.ID = 1
     LEFT JOIN municipality AS lmu ON lmu.ID = lgu.MunicipalityID
     WHERE (gle.AccountCode LIKE @accountCode OR @accountCode = '%')

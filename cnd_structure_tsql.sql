@@ -72,7 +72,8 @@ CREATE TABLE [accountsubtype] (
   [ModifyDate] datetime DEFAULT NULL,
   [AccountTypeID] bigINT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Account SubType] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Account SubType] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -93,7 +94,8 @@ CREATE TABLE [accounttype] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Account Type] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Account Type] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -338,7 +340,8 @@ CREATE TABLE [audittrail] (
   [ParamValues] NVARCHAR(MAX) DEFAULT NULL,
   [CreatedDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Audit Trail] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Audit Trail] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -366,7 +369,8 @@ CREATE TABLE [bank] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Bank] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Bank] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -391,7 +395,8 @@ CREATE TABLE [barangay] (
   [ModifyDate] datetime DEFAULT NULL,
   [PIN] INT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Barangay] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Barangay] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -464,7 +469,8 @@ CREATE TABLE [budget] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Budget] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Budget] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -527,7 +533,8 @@ CREATE TABLE [budgettype] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Budget Type] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Budget Type] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -839,7 +846,8 @@ CREATE TABLE [currency] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Currency] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Currency] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -894,7 +902,8 @@ CREATE TABLE [customer] (
   [KindofOrganization] varchar(150) DEFAULT NULL,
   [DateofRegistration] date DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Customer] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Customer] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -929,7 +938,8 @@ CREATE TABLE [department] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Department] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Department] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1026,7 +1036,8 @@ CREATE TABLE [documenttype] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Document Type] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Document Type] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1046,7 +1057,8 @@ CREATE TABLE [documenttypecategory] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Document Type Category] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Document Type Category] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1095,7 +1107,8 @@ CREATE TABLE [employee] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Employee] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Employee] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1115,7 +1128,8 @@ CREATE TABLE [employmentstatus] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Employment Status] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Employment Status] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1154,7 +1168,8 @@ CREATE TABLE [financialstatement] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Financial Statement] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Financial Statement] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1179,7 +1194,8 @@ CREATE TABLE [fiscalyear] (
   [ModifyDate] datetime DEFAULT NULL,
   [AssessedValue] bigINT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Fiscal Year] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Fiscal Year] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1268,7 +1284,8 @@ CREATE TABLE [homeowner] (
   [CustomerID] bigINT DEFAULT NULL,
   [PropertyCount] smallINT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Home Owner] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Home Owner] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1288,7 +1305,8 @@ CREATE TABLE [industrytype] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_IndustryType] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_IndustryType] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1316,7 +1334,8 @@ CREATE TABLE [item] (
   [PurchaseOrSales] varchar(50) DEFAULT NULL,
   [Vatable] tinyINT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Item] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Item] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1337,7 +1356,8 @@ CREATE TABLE [itemunit] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Item Unit] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Item Unit] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1396,7 +1416,8 @@ CREATE TABLE [lgu] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_LGU] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_LGU] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1510,7 +1531,8 @@ CREATE TABLE [module] (
   [ID] bigINT NOT NULL IDENTITY(1,1),
   [Description] varchar(150) DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Module] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Module] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1532,7 +1554,8 @@ CREATE TABLE [moduleaccess] (
   [Print] tinyINT DEFAULT NULL,
   [Mayor] tinyINT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Module Access] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Module Access] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1576,7 +1599,8 @@ CREATE TABLE [nationality] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Nationality] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Nationality] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1618,7 +1642,8 @@ CREATE TABLE [paymentmethod] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Payment Method] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Payment Method] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1640,7 +1665,8 @@ CREATE TABLE [paymentterms] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Payment Terms] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Payment Terms] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1660,7 +1686,8 @@ CREATE TABLE [position] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Position Level] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Position Level] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1810,7 +1837,8 @@ CREATE TABLE [property] (
   [AdvanceYear] date DEFAULT NULL,
   [T_D_No] bigINT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Property] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Property] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1873,7 +1901,8 @@ CREATE TABLE [propertycoowners] (
   [CreatedDate] date DEFAULT NULL,
   [Createdby] bigINT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Property Co Owners] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Property Co Owners] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -1967,7 +1996,8 @@ CREATE TABLE [propertytaxdeclaration] (
   [Active] tinyINT DEFAULT NULL,
   [GeneralRevision] INT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Property Tax Declaration] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Property Tax Declaration] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -2055,7 +2085,8 @@ CREATE TABLE [region] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Region_1] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Region_1] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -2139,7 +2170,8 @@ CREATE TABLE [subdepartment] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Subdepartment] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Subdepartment] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -2182,7 +2214,8 @@ CREATE TABLE [taxcode] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Tax Code] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Tax Code] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -2503,7 +2536,8 @@ CREATE TABLE [useraccess] (
   [CreatedBy] varchar(50) DEFAULT NULL,
   [CreatedDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_User Access] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_User Access] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -2525,7 +2559,8 @@ CREATE TABLE [users] (
   [CreatedDate] datetime NOT NULL,
   [PositionID] INT DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Users] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Users] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -2586,7 +2621,8 @@ CREATE TABLE [vendor] (
   [KindofOrganization] varchar(150) DEFAULT NULL,
   [DateofRegistration] date DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_Vendor] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_Vendor] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -2606,7 +2642,8 @@ CREATE TABLE [vendorcustomertype] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_VendorCustomerType] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_VendorCustomerType] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -2626,7 +2663,8 @@ CREATE TABLE [vendortype] (
   [ModifyBy] varchar(150) DEFAULT NULL,
   [ModifyDate] datetime DEFAULT NULL,
   PRIMARY KEY ([ID])
---   UNIQUE KEY [PK_VendorType] ([ID]) -- COMMENTED OUT (MySQL Index)
+--   UNIQUE KEY [PK_VendorType] ([ID])
+ -- COMMENTED OUT (MySQL Index)
 );
 -- MySQL Header Removed
 
@@ -2654,5 +2692,5 @@ CREATE TABLE [watermarks] (
 -- MySQL Header Removed
 -- MySQL Header Removed
 
--- T-SQL CONVERSION DONE BY ANTIGRAVITY
+
 

@@ -127,14 +127,20 @@ exports.view = async (req, res) => {
 
     let results;
     try {
+      // Map ledger labels to numeric thresholds for account code length
+      const subMapping = {
+        'General Ledger': '6',
+        'Subsidiary Ledger': '20'
+      };
+      const subValue = subMapping[ledger] || ledger || '%';
+
       results = await sequelize.query(
-        'EXEC SP_TrialBalance :endDate, :fundID, :approver, :sub',
+        'EXEC SP_TrialBalance :endDate, :fundID, :sub',
         {
           replacements: {
             endDate: endDate || new Date().toISOString().slice(0, 10),
             fundID: fundID || '%',
-            approver: approverID || '%',
-            sub: ledger || '%'
+            sub: subValue
           },
         }
       );
@@ -161,14 +167,20 @@ exports.exportExcel = async (req, res) => {
 
     let results;
     try {
+      // Map ledger labels to numeric thresholds for account code length
+      const subMapping = {
+        'General Ledger': '6',
+        'Subsidiary Ledger': '20'
+      };
+      const subValue = subMapping[ledger] || ledger || '%';
+
       results = await sequelize.query(
-        'EXEC SP_TrialBalance :endDate, :fundID, :approver, :sub',
+        'EXEC SP_TrialBalance :endDate, :fundID, :sub',
         {
           replacements: {
             endDate: endDate || new Date().toISOString().slice(0, 10),
             fundID: fundID || '%',
-            approver: approverID || '%',
-            sub: ledger || '%'
+            sub: subValue
           },
         }
       );

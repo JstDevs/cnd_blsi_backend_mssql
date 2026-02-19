@@ -149,7 +149,33 @@ exports.view = async (req, res) => {
       results = mockData;
     }
 
-    return res.json(results);
+    // Robust way to handle both [rows, metadata] and direct rows from DB result
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    } else if (results) {
+      rows = results;
+    }
+
+    // Map to ensure PascalCase keys and numeric types for the frontend
+    const finalData = rows.map(item => ({
+      AccountCode: item.AccountCode || '',
+      AccountName: item.AccountName || '',
+      Debit: Number(item.Debit || 0),
+      Credit: Number(item.Credit || 0),
+      EndDate: item.EndDate || '',
+      Funds: item.Funds || '',
+      FullName: item.FullName || '',
+      Position: item.Position || '',
+      Municipality: item.Municipality || '',
+      Province: item.Province || '',
+    }));
+
+    return res.json(finalData);
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'Internal server error' });

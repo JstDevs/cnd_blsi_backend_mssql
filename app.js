@@ -51,6 +51,7 @@ const authRoutes = require('./routes/auth');
 const accountcategoryRoutes = require('./routes/accountCategory');
 const generalservicerecipt = require("./routes/generalservicerecipt")
 const taxcertificate = require("./routes/taxcertificate")
+const alphalistRoutes = require('./routes/alphalist');
 const communityTaxIndividualRoutes = require('./routes/communityTaxIndividual');
 const accountsubtypeRoutes = require('./routes/accountSubType');
 const accounttypeRoutes = require('./routes/accountType');
@@ -206,6 +207,8 @@ app.use('/attachment', attachmentRoutes);
 app.use('/attachmenttemp', attachmenttempRoutes);
 app.use('/audittrail', audittrailRoutes);
 app.use('/bank', bankRoutes);
+app.use('/bir', bir);
+app.use('/alphalist', alphalistRoutes);
 app.use('/barangay', barangayRoutes);
 app.use('/beginningbalance', beginningbalanceRoutes);
 app.use('/budget', budgetRoutes);

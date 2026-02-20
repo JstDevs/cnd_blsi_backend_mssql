@@ -109,7 +109,12 @@ exports.view = async (req, res) => {
       }
     );
 
-    return res.json(results);
+    if (Array.isArray(results) && results.length > 0) {
+        return res.json(results[0]);
+    } else {
+        return res.json(results);
+    }
+    
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'Internal server error' });

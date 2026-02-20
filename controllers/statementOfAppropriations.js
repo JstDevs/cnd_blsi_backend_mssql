@@ -117,13 +117,33 @@ exports.view = async (req, res) => {
     } = req.body;
 
     const results = await sequelize.query(
-      'CALL SP_SAAOB(:startDate, :endDate, :fiscalYear, :fundID, :user)',
+      'EXEC SP_SAAOB @startDate = :startDate, @endDate = :endDate, @fiscalID = :fiscalYear, @fundID = :fundID, @dep = :departmentID',
       {
-        replacements: { startDate, endDate, fiscalYear: fiscalYearID, fundID: fundsID, user: req.user.employeeID },
+        replacements: { startDate, endDate, fiscalYear: fiscalYearID, fundID: fundsID, departmentID: departmentID || '%' },
+        type: sequelize.QueryTypes.SELECT
       }
     );
 
-    return res.json(results);
+    const formattedResults = results.map(row => ({
+      "Fund": row.Fund,
+      "Year": row['Fiscal Year'],
+      "Month End": row['End Date'], // Mapping End Date to Month End
+      "Account Code": row.AccountCode,
+      "ID": row.ID,
+      "Category": row.Subtype, // Mapping Subtype to Category
+      "Name": row.Name,
+      "Appropriation": row.Appropriation,
+      "Allotment": row.Allotment,
+      "Obligation": row.Obligation,
+      "Unobligated Appropriation": (row.Appropriation || 0) - (row.Allotment || 0),
+      "Unobligated Allotment": (row.Allotment || 0) - (row.Obligation || 0),
+      "Municipality": "Passi City", // Hardcoded per user context or generic
+      "Province": "Iloilo", // Hardcoded per user context
+      "Requested By": "", // Not returned by SP
+      "Position": "" // Not returned by SP
+    }));
+
+    return res.json(formattedResults);
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -142,15 +162,23 @@ exports.viewSAO = async (req, res) => {
     } = req.body;
 
     const results = await sequelize.query(
-      'CALL display_SAO(:startDate, :endDate, :depID, :fiscalYear, :fundID)',
+      'EXEC SP_SAO @startDate = :startDate, @endDate = :endDate, @fiscalID = :fiscalYear, @fundID = :fundID, @dep = :departmentID',
       {
-        replacements: { startDate, endDate, depID: departmentID, fiscalYear: fiscalYearID, fundID: fundsID },
+        replacements: { startDate, endDate, fiscalYear: fiscalYearID, fundID: fundsID, departmentID: departmentID || '%' },
+        type: sequelize.QueryTypes.SELECT
       }
     );
 
+    const formattedResults = results.map(row => ({
+      "Date": row['Invoice Date'],
+      "OBR No.": row['Invoice Number'],
+      "Particulars": row.Particulars,
+      "Appropriation/ Allotment": row.Appropriation,
+      "Expenses": row.Obligation,
+      "Balance": row.Balance
+    }));
 
-
-    return res.json(results);
+    return res.json(formattedResults);
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -169,9 +197,9 @@ exports.exportExcel = async (req, res) => {
 
 
     const results = await sequelize.query(
-      'CALL SP_SAAOB(:startDate, :endDate, :fiscalYear, :fundID, :user)',
+      'EXEC SP_SAAOB @startDate = :startDate, @endDate = :endDate, @fiscalID = :fiscalYear, @fundID = :fundID, @dep = :departmentID',
       {
-        replacements: { startDate, endDate, fiscalYear: fiscalYearID, fundID: fundsID, user: req.user.employeeID },
+        replacements: { startDate, endDate, fiscalYear: fiscalYearID, fundID: fundsID, departmentID: departmentID || '%' },
       }
     );
 

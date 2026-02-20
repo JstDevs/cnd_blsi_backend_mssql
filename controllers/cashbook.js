@@ -103,9 +103,9 @@ exports.view = async (req, res) => {
     } = req.body;
 
     const results = await sequelize.query(
-      'CALL SP_Cashbook_SanDionisio(:startDate, :endDate, :fundID, :user)',
+      'EXEC SP_Cashbook @startDate = :startDate, @endDate = :endDate, @fundID = :fundID',
       {
-        replacements: { startDate: StartDate, endDate: EndDate, fundID: FundID, user: req.user.employeeID },
+         replacements: { startDate: StartDate, endDate: EndDate, fundID: FundID },
       }
     );
 
@@ -125,9 +125,9 @@ exports.exportExcel = async (req, res) => {
     } = req.body;
 
     const results = await sequelize.query(
-      'CALL SP_Cashbook_SanDionisio(:startDate, :endDate, :fundID, :user)',
+      'EXEC SP_Cashbook_SanDionisio @startDate = :startDate, @endDate = :endDate, @fundID = :fundID',
       {
-        replacements: { startDate: StartDate, endDate: EndDate, fundID: FundID, user: req.user.employeeID },
+        replacements: { startDate: StartDate, endDate: EndDate, fundID: FundID },
       }
     );
 

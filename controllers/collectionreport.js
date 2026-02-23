@@ -336,12 +336,11 @@ exports.getCollectionSummaryMonthly = async (req, res) => {
     };
 
     const results = await sequelize.query(
-      'EXEC SP_SummaryOfCollection_Monthly :month, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
+      'EXEC SP_SummaryOfCollection_Monthly :month, :year, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           month,
           year,
-          user: req.user.id,
           ctc: checkboxFlags.ctc,
           btc: checkboxFlags.btc,
           mrc: checkboxFlags.mrc,
@@ -382,12 +381,11 @@ exports.getCollectionSummaryQuarterly = async (req, res) => {
     };
 
     const results = await sequelize.query(
-      'EXEC SP_SummaryOfCollection_Quarterly :quarter, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
+      'EXEC SP_SummaryOfCollection_Quarterly :quarter, :year, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           quarter,
           year,
-          user: req.user.id,
           ctc: checkboxFlags.ctc,
           btc: checkboxFlags.btc,
           mrc: checkboxFlags.mrc,
@@ -539,12 +537,11 @@ exports.exportExcelMonthly = async (req, res) => {
     };
 
     const results = await sequelize.query(
-      'EXEC SP_SummaryOfCollection_Monthly :month, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
+      'EXEC SP_SummaryOfCollection_Monthly :month, :year, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           month,
           year,
-          user: req.user.id,
           ctc: checkboxFlags.ctc,
           btc: checkboxFlags.btc,
           mrc: checkboxFlags.mrc,
@@ -607,12 +604,11 @@ exports.exportExcelQuarterly = async (req, res) => {
 
 
     const results = await sequelize.query(
-      'EXEC SP_SummaryOfCollection_Quarterly :quarter, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
+      'EXEC SP_SummaryOfCollection_Quarterly :quarter, :year, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           quarter,
           year,
-          user: req.user.id,
           ctc: checkboxFlags.ctc,
           btc: checkboxFlags.btc,
           mrc: checkboxFlags.mrc,

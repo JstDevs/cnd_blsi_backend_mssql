@@ -280,22 +280,21 @@ exports.getCollectionSummaryDaily = async (req, res) => {
   try {
     const { date, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
 
-    // Convert checkbox values to boolean flags (or default to 0 if unchecked)
+    // Convert checkbox values to actual DocumentTypeIDs (or -1 if unchecked)
     const checkboxFlags = {
-      ctc: ctc ? 1 : 0,
-      btc: btc ? 1 : 0,
-      mrc: mrc ? 1 : 0,
-      gsi: gsi ? 1 : 0,
-      rpt: rpt ? 1 : 0,
-      pmt: pmt ? 1 : 0,
+      ctc: ctc ? 5 : -1,
+      btc: btc ? 18 : -1,
+      mrc: mrc ? 19 : -1,
+      gsi: gsi ? 6 : -1,
+      rpt: rpt ? 11 : -1,
+      pmt: pmt ? 30 : -1,
     };
 
     const results = await sequelize.query(
-      'CALL SP_SummaryOfCollection_Daily(:date, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt)',
+      'EXEC SP_SummaryOfCollection_Daily :date, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           date,
-          user: req.user.id,
           ctc: checkboxFlags.ctc,
           btc: checkboxFlags.btc,
           mrc: checkboxFlags.mrc,
@@ -306,7 +305,15 @@ exports.getCollectionSummaryDaily = async (req, res) => {
       }
     );
 
-    return res.json(results);
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    }
+    return res.json(rows);
   } catch (err) {
     console.error('Error fetching:', err);
     res.status(500).json({ error: err.message });
@@ -318,18 +325,18 @@ exports.getCollectionSummaryMonthly = async (req, res) => {
   try {
     const { month, year, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
 
-    // Convert checkbox values to boolean flags (or default to 0 if unchecked)
+    // Convert checkbox values to actual DocumentTypeIDs (or -1 if unchecked)
     const checkboxFlags = {
-      ctc: ctc ? 1 : 0,
-      btc: btc ? 1 : 0,
-      mrc: mrc ? 1 : 0,
-      gsi: gsi ? 1 : 0,
-      rpt: rpt ? 1 : 0,
-      pmt: pmt ? 1 : 0,
+      ctc: ctc ? 5 : -1,
+      btc: btc ? 18 : -1,
+      mrc: mrc ? 19 : -1,
+      gsi: gsi ? 6 : -1,
+      rpt: rpt ? 11 : -1,
+      pmt: pmt ? 30 : -1,
     };
 
     const results = await sequelize.query(
-      'CALL SP_SummaryOfCollection_Monthly(:month, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt)',
+      'EXEC SP_SummaryOfCollection_Monthly :month, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           month,
@@ -345,7 +352,15 @@ exports.getCollectionSummaryMonthly = async (req, res) => {
       }
     );
 
-    return res.json(results);
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    }
+    return res.json(rows);
   } catch (err) {
     console.error('Error fetching:', err);
     res.status(500).json({ error: err.message });
@@ -356,18 +371,18 @@ exports.getCollectionSummaryQuarterly = async (req, res) => {
   try {
     const { quarter, year, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
 
-    // Convert checkbox values to boolean flags (or default to 0 if unchecked)
+    // Convert checkbox values to actual DocumentTypeIDs (or -1 if unchecked)
     const checkboxFlags = {
-      ctc: ctc ? 1 : 0,
-      btc: btc ? 1 : 0,
-      mrc: mrc ? 1 : 0,
-      gsi: gsi ? 1 : 0,
-      rpt: rpt ? 1 : 0,
-      pmt: pmt ? 1 : 0,
+      ctc: ctc ? 5 : -1,
+      btc: btc ? 18 : -1,
+      mrc: mrc ? 19 : -1,
+      gsi: gsi ? 6 : -1,
+      rpt: rpt ? 11 : -1,
+      pmt: pmt ? 30 : -1,
     };
 
     const results = await sequelize.query(
-      'CALL SP_SummaryOfCollection_Quarterly(:quarter, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt)',
+      'EXEC SP_SummaryOfCollection_Quarterly :quarter, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           quarter,
@@ -383,7 +398,15 @@ exports.getCollectionSummaryQuarterly = async (req, res) => {
       }
     );
 
-    return res.json(results);
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    }
+    return res.json(rows);
   } catch (err) {
     console.error('Error fetching:', err);
     res.status(500).json({ error: err.message });
@@ -394,18 +417,18 @@ exports.getCollectionSummaryFlexible = async (req, res) => {
   try {
     const { startdate, enddate, user, note, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
 
-    // Convert checkbox values to boolean flags (or default to 0 if unchecked)
+    // Convert checkbox values to actual DocumentTypeIDs (or -1 if unchecked)
     const checkboxFlags = {
-      ctc: ctc ? 1 : 0,
-      btc: btc ? 1 : 0,
-      mrc: mrc ? 1 : 0,
-      gsi: gsi ? 1 : 0,
-      rpt: rpt ? 1 : 0,
-      pmt: pmt ? 1 : 0,
+      ctc: ctc ? 5 : -1,
+      btc: btc ? 18 : -1,
+      mrc: mrc ? 19 : -1,
+      gsi: gsi ? 6 : -1,
+      rpt: rpt ? 11 : -1,
+      pmt: pmt ? 30 : -1,
     };
 
     const results = await sequelize.query(
-      'CALL SP_SummaryOfCollection_Flexible(:startdate, :enddate, :user, :note, :ctc, :btc, :mrc, :gsi, :rpt, :pmt)',
+      'EXEC SP_SummaryOfCollection_Flexible :startdate, :enddate, :user, :note, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           startdate,
@@ -422,7 +445,15 @@ exports.getCollectionSummaryFlexible = async (req, res) => {
       }
     );
 
-    return res.json(results);
+    let rows = [];
+    if (Array.isArray(results)) {
+      if (results.length > 0 && Array.isArray(results[0])) {
+        rows = results[0];
+      } else {
+        rows = results;
+      }
+    }
+    return res.json(rows);
   } catch (err) {
     console.error('Error fetching:', err);
     res.status(500).json({ error: err.message });
@@ -433,22 +464,21 @@ exports.exportExcelDaily = async (req, res) => {
   try {
     const { date, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
 
-    // Convert checkbox values to boolean flags (or default to 0 if unchecked)
+    // Convert checkbox values to actual DocumentTypeIDs (or -1 if unchecked)
     const checkboxFlags = {
-      ctc: ctc ? 1 : 0,
-      btc: btc ? 1 : 0,
-      mrc: mrc ? 1 : 0,
-      gsi: gsi ? 1 : 0,
-      rpt: rpt ? 1 : 0,
-      pmt: pmt ? 1 : 0,
+      ctc: ctc ? 5 : -1,
+      btc: btc ? 18 : -1,
+      mrc: mrc ? 19 : -1,
+      gsi: gsi ? 6 : -1,
+      rpt: rpt ? 11 : -1,
+      pmt: pmt ? 30 : -1,
     };
 
     const results = await sequelize.query(
-      'CALL SP_SummaryOfCollection_Daily(:date, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt)',
+      'EXEC SP_SummaryOfCollection_Daily :date, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           date,
-          user: req.user.id,
           ctc: checkboxFlags.ctc,
           btc: checkboxFlags.btc,
           mrc: checkboxFlags.mrc,
@@ -498,18 +528,18 @@ exports.exportExcelMonthly = async (req, res) => {
   try {
     const { month, year, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
 
-    // Convert checkbox values to boolean flags (or default to 0 if unchecked)
+    // Convert checkbox values to actual DocumentTypeIDs (or -1 if unchecked)
     const checkboxFlags = {
-      ctc: ctc ? 1 : 0,
-      btc: btc ? 1 : 0,
-      mrc: mrc ? 1 : 0,
-      gsi: gsi ? 1 : 0,
-      rpt: rpt ? 1 : 0,
-      pmt: pmt ? 1 : 0,
+      ctc: ctc ? 5 : -1,
+      btc: btc ? 18 : -1,
+      mrc: mrc ? 19 : -1,
+      gsi: gsi ? 6 : -1,
+      rpt: rpt ? 11 : -1,
+      pmt: pmt ? 30 : -1,
     };
 
     const results = await sequelize.query(
-      'CALL SP_SummaryOfCollection_Monthly(:month, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt)',
+      'EXEC SP_SummaryOfCollection_Monthly :month, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           month,
@@ -565,19 +595,19 @@ exports.exportExcelQuarterly = async (req, res) => {
   try {
     const { quarter, year, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
 
-    // Convert checkbox values to boolean flags (or default to 0 if unchecked)
+    // Convert checkbox values to actual DocumentTypeIDs (or -1 if unchecked)
     const checkboxFlags = {
-      ctc: ctc ? 1 : 0,
-      btc: btc ? 1 : 0,
-      mrc: mrc ? 1 : 0,
-      gsi: gsi ? 1 : 0,
-      rpt: rpt ? 1 : 0,
-      pmt: pmt ? 1 : 0,
+      ctc: ctc ? 5 : -1,
+      btc: btc ? 18 : -1,
+      mrc: mrc ? 19 : -1,
+      gsi: gsi ? 6 : -1,
+      rpt: rpt ? 11 : -1,
+      pmt: pmt ? 30 : -1,
     };
 
 
     const results = await sequelize.query(
-      'CALL SP_SummaryOfCollection_Quarterly(:quarter, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt)',
+      'EXEC SP_SummaryOfCollection_Quarterly :quarter, :year, :user, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           quarter,
@@ -634,19 +664,19 @@ exports.exportExcelFlexible = async (req, res) => {
   try {
     const { startdate, enddate, user, note, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
 
-    // Convert checkbox values to boolean flags (or default to 0 if unchecked)
+    // Convert checkbox values to actual DocumentTypeIDs (or -1 if unchecked)
     const checkboxFlags = {
-      ctc: ctc ? 1 : 0,
-      btc: btc ? 1 : 0,
-      mrc: mrc ? 1 : 0,
-      gsi: gsi ? 1 : 0,
-      rpt: rpt ? 1 : 0,
-      pmt: pmt ? 1 : 0,
+      ctc: ctc ? 5 : -1,
+      btc: btc ? 18 : -1,
+      mrc: mrc ? 19 : -1,
+      gsi: gsi ? 6 : -1,
+      rpt: rpt ? 11 : -1,
+      pmt: pmt ? 30 : -1,
     };
 
 
     const results = await sequelize.query(
-      'CALL SP_SummaryOfCollection_Flexible(:startdate, :enddate, :user, :note, :ctc, :btc, :mrc, :gsi, :rpt, :pmt)',
+      'EXEC SP_SummaryOfCollection_Flexible :startdate, :enddate, :user, :note, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           startdate,

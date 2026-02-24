@@ -413,7 +413,7 @@ exports.getCollectionSummaryQuarterly = async (req, res) => {
 
 exports.getCollectionSummaryFlexible = async (req, res) => {
   try {
-    const { startdate, enddate, user, note, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
+    const { startdate, enddate, ctc, btc, mrc, gsi, rpt, pmt } = req.query;
 
     // Convert checkbox values to actual DocumentTypeIDs (or -1 if unchecked)
     const checkboxFlags = {
@@ -426,13 +426,13 @@ exports.getCollectionSummaryFlexible = async (req, res) => {
     };
 
     const results = await sequelize.query(
-      'EXEC SP_SummaryOfCollection_Flexible :startdate, :enddate, :user, :note, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
+      'EXEC SP_SummaryOfCollection_Flexible :startdate, :enddate, :ctc, :btc, :mrc, :gsi, :rpt, :pmt',
       {
         replacements: {
           startdate,
           enddate,
-          user: req.user.employeeID,
-          note,
+          // user: req.user.employeeID,
+          // note,
           ctc: checkboxFlags.ctc,
           btc: checkboxFlags.btc,
           mrc: checkboxFlags.mrc,
